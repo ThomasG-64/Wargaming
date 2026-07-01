@@ -64,6 +64,7 @@ def test_turn_record_serializes_to_json_directly():
         (lambda d: d["agents"][0].__setitem__("name", "  "), "missing a name"),
         (lambda d: d["agents"][0].__setitem__("objective", ""), "missing an objective"),
         (lambda d: d["agents"][0].__setitem__("model", ""), "missing a model"),
+        (lambda d: d["agents"][1].__setitem__("name", " a "), "must be unique"),  # matches agents[0]'s "A" case/whitespace-insensitively
         (lambda d: d["judge"].__setitem__("model", ""), "judge is missing a model"),
         (lambda d: d.__setitem__("scenario", "   "), "scenario is required"),
         (lambda d: d.__setitem__("num_turns", 0), "num_turns must be at least 1"),

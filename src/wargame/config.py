@@ -53,6 +53,7 @@ class GameConfig:
         """
         if not self.agents:
             raise ValueError("At least one agent is required.")
+        seen_names = set()
         for i, agent in enumerate(self.agents):
             if not agent.name.strip():
                 raise ValueError(f"Agent {i + 1} is missing a name.")
@@ -60,6 +61,13 @@ class GameConfig:
                 raise ValueError(f"Agent '{agent.name}' is missing an objective.")
             if not agent.model.strip():
                 raise ValueError(f"Agent '{agent.name}' is missing a model.")
+            # Agent names are dict keys in TurnRecord.actions - a duplicate
+            # would silently overwrite an earlier agent's action, wasting
+            # its API call and losing its output with no visible error.
+            normalized = agent.name.strip().lower()
+            if normalized in seen_names:
+                raise ValueError(f"Agent name '{agent.name}' is used more than once. Agent names must be unique.")
+            seen_names.add(normalized)
         if not self.judge.model.strip():
             raise ValueError("The judge is missing a model.")
         if not self.scenario.strip():

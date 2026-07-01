@@ -70,3 +70,11 @@ def test_index_page_is_served():
     assert response.status_code == 200
     assert "WargamingLLM" in response.text
     assert "Sentient Futures" in response.text
+
+
+def test_index_page_is_not_cached():
+    # A stale cached copy of index.html (with old preset agents/judge/
+    # scenario) is exactly the "changes aren't reflected" bug this test
+    # guards against.
+    response = client.get("/")
+    assert response.headers["cache-control"] == "no-store, must-revalidate"

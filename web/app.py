@@ -18,6 +18,20 @@ from wargame.engine import run_game
 app = FastAPI()
 
 
+@app.middleware("http")
+async def no_cache(request, call_next):
+    # Without this, browsers can silently serve a stale cached copy of
+    # index.html (and its embedded preset agents/judge/scenario) after
+    # we've pushed changes - you'd edit a preset, redeploy, refresh, and
+    # still see the old one until a hard-refresh happened to bypass the
+    # cache. This is a small personal tool, not a high-traffic site, so
+    # trading away caching entirely for "you always see what's actually
+    # deployed" is the right default.
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store, must-revalidate"
+    return response
+
+
 class AgentInput(BaseModel):
     name: str
     objective: str
