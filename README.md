@@ -21,9 +21,10 @@ scenario/agents described there).
 
 ## Status
 
-Backend prototype: fully configurable agents/judge/scenario/turn-count,
-run via an example script. No web interface yet. See
-[the roadmap](#roadmap) below.
+Runs locally as a website: a form for agents/judge/scenario/turns/your
+OpenRouter key, submit, and it runs the whole game and displays the
+transcript. See [the roadmap](#roadmap) below for what's not built yet
+(deployment, live per-turn progress, etc.).
 
 ## Setup
 
@@ -33,15 +34,33 @@ run via an example script. No web interface yet. See
    python -m venv venv
    venv\Scripts\activate   # Windows
    ```
-3. Install dependencies:
+3. Install dependencies and the project itself (editable install, so
+   `import wargame` works from anywhere — scripts, tests, the web app):
    ```
    pip install -r requirements.txt
+   pip install -e .
    ```
 4. Copy `.env.example` to `.env` and add your OpenRouter key
-   (get one at https://openrouter.ai/). This key is only read locally
-   by the demo script below — the backend itself takes the key as a
-   parameter, since a real website passes each visitor's own key per
-   request.
+   (get one at https://openrouter.ai/). This is only used by the demo
+   script below for local convenience — the website itself has you type
+   your key into the page, since a real deployment would have each
+   visitor bring their own.
+
+## Running the website (local only, for now)
+
+```
+venv\Scripts\python.exe -m uvicorn web.app:app --reload
+```
+
+Then open http://127.0.0.1:8000 in your browser. Fill in the agents
+(name, objective, an OpenRouter model slug like
+`anthropic/claude-3.5-sonnet`), the judge's model and background
+context, a starting scenario, a turn count, and your OpenRouter key,
+then submit. It's a "submit and wait" design for now — the whole game
+runs before anything appears on the page, which can take a while for
+more agents/turns; live per-turn progress is a possible later upgrade,
+not built yet. `web/app.py` is a thin layer over the backend — see
+"The backend API" below for what it actually calls.
 
 ## Running the example game
 
@@ -86,14 +105,17 @@ https://openrouter.ai/models.
 
 ## Testing without a live API key
 
-Every module has been verified end-to-end without spending any real API
-calls, using litellm's own `mock_response` feature (it lets a real
-`litellm.completion()` call run through its normal request-building path
-and return a scripted reply instead of hitting the network) — see
-`tests/test_llm.py` and `tests/test_integration.py`. This confirms the
-OpenRouter routing, request shape, and full multi-agent/multi-turn loop
-all work correctly; the only thing untested is an actual live model
-reply, which needs a real key. Run everything with:
+Every module, including the FastAPI HTTP layer, has been verified
+end-to-end without spending any real API calls, using litellm's own
+`mock_response` feature (it lets a real `litellm.completion()` call run
+through its normal request-building path and return a scripted reply
+instead of hitting the network) — see `tests/test_llm.py`,
+`tests/test_integration.py`, and `tests/test_api.py` (the latter uses
+FastAPI's `TestClient` to drive real HTTP requests against the app
+in-process). This confirms OpenRouter routing, request shape, the full
+multi-agent/multi-turn loop, and the web API all work correctly; the
+only thing untested is an actual live model reply, which needs a real
+key. Run everything with:
 
 ```
 venv\Scripts\python.exe -m pytest tests/ -v
@@ -103,6 +125,7 @@ venv\Scripts\python.exe -m pytest tests/ -v
 
 ```
 src/wargame/    importable package: agents, judge, game config, the turn engine, the LLM wrapper
+web/            FastAPI backend (app.py) + the browser frontend (static/index.html)
 scripts/        entry-point scripts that use the package (run_example.py)
 tests/          automated tests (no API key required)
 docs/           design docs
@@ -111,6 +134,5 @@ output/         generated transcripts (gitignored)
 
 ## Roadmap
 
-- **Backend prototype** — configurable agents/judge/scenario/turns, OpenRouter-backed, runnable via example script. *(current)*
-- **Next** — welfare/outcome-scoring module, structured JSON output (not just Markdown), agent memory across turns.
-- **Later** — web frontend calling `GameConfig`/`run_game` directly.
+- **Website (local only)** — form-driven agents/judge/scenario/turns, OpenRouter-backed, submit-and-wait results. *(current)*
+- **Next** — a real live-key run-through together, then decide what's worth adding: live per-turn progress, deploying it somewhere reachable, welfare/outcome-scoring module, structured JSON output beyond the raw transcript, agent memory across turns.
