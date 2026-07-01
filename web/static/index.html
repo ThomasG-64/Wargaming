@@ -2,45 +2,169 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<title>AI Wargame</title>
+<!-- EDIT HERE: page title / browser tab text -->
+<title>Sentient Futures: WargamingLLM</title>
 <style>
-  body { font-family: system-ui, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1rem; }
-  fieldset { margin-bottom: 1.5rem; }
-  .agent-row { border: 1px solid #ccc; padding: 0.75rem; margin-bottom: 0.75rem; border-radius: 6px; }
-  label { display: block; font-weight: bold; margin-top: 0.5rem; }
-  input[type=text], input[type=number], input[type=password], textarea { width: 100%; box-sizing: border-box; padding: 0.4rem; margin-top: 0.2rem; }
-  textarea { min-height: 3.5rem; }
-  button { margin-top: 0.5rem; padding: 0.5rem 1rem; cursor: pointer; }
-  #status { margin-top: 1rem; font-weight: bold; }
-  #status.error { color: #b00020; }
-  .turn { border-top: 2px solid #333; padding-top: 0.75rem; margin-top: 1.5rem; }
+  :root {
+    --bg: #f4f6f8;
+    --panel: #ffffff;
+    --border: #dde3e8;
+    --text: #1c2530;
+    --muted: #5b6b79;
+    --accent: #0f766e;
+    --accent-dark: #0b5750;
+    --danger: #b3261e;
+    --danger-bg: #fdecea;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2.5rem 1.25rem 4rem;
+    line-height: 1.5;
+  }
+  header.page-header { text-align: center; margin-bottom: 2.5rem; }
+  header.page-header h1 { margin: 0; font-size: 2rem; letter-spacing: -0.02em; }
+  header.page-header .tagline { color: var(--muted); margin-top: 0.4rem; font-size: 1.05rem; }
+
+  #file-warning {
+    display: none;
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+    font-weight: 600;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.75rem;
+    box-shadow: 0 1px 3px rgba(16, 24, 32, 0.06);
+  }
+  .panel > legend, .panel > h2 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    padding: 0 0.25rem;
+    margin: 0 0 1rem 0;
+  }
+
+  .agent-row {
+    border: 1px solid var(--border);
+    background: #fafcfd;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 10px;
+    position: relative;
+  }
+  .agent-row .agent-index {
+    position: absolute;
+    top: -0.7rem;
+    left: 0.85rem;
+    background: var(--accent);
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+  }
+
+  label { display: block; font-weight: 600; margin-top: 0.75rem; font-size: 0.92rem; color: var(--text); }
+  label:first-child { margin-top: 0; }
+  input[type=text], input[type=number], input[type=password], textarea {
+    width: 100%;
+    font: inherit;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.6rem;
+    margin-top: 0.3rem;
+    background: white;
+  }
+  input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  textarea { min-height: 3.5rem; resize: vertical; }
+
+  button {
+    font: inherit;
+    font-weight: 600;
+    border: none;
+    border-radius: 8px;
+    padding: 0.55rem 1.1rem;
+    cursor: pointer;
+    background: var(--accent);
+    color: white;
+    margin-top: 0.75rem;
+  }
+  button:hover { background: var(--accent-dark); }
+  button:disabled { background: #9fb3ad; cursor: not-allowed; }
+  button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  button.secondary:hover { background: #ecf5f4; }
+  button.remove-agent { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 0.3rem 0.7rem; font-size: 0.85rem; }
+  button.remove-agent:hover { background: var(--danger-bg); }
+  button[type=submit] { font-size: 1.05rem; padding: 0.75rem 1.5rem; width: 100%; }
+
+  #status { margin-top: 1rem; font-weight: 600; text-align: center; }
+  #status.error { color: var(--danger); }
+
+  .turn { border-top: 2px solid var(--accent); padding-top: 0.9rem; margin-top: 1.75rem; }
+  .turn h3 { margin-bottom: 0.5rem; }
   .action { margin: 0.5rem 0; }
+
+  footer#about {
+    margin-top: 3rem;
+    border-top: 1px solid var(--border);
+    padding-top: 1.75rem;
+    color: var(--muted);
+    font-size: 0.95rem;
+  }
+  footer#about h2 { color: var(--text); font-size: 1.1rem; }
+  footer#about p { margin: 0.6rem 0; }
 </style>
 </head>
 <body>
 
-<h1>AI Wargame</h1>
+<div id="file-warning">
+  This page was opened directly as a file, so it can't reach the backend.
+  Start the server (<code>uvicorn web.app:app --reload</code>) and open
+  <code>http://127.0.0.1:8000</code> instead.
+</div>
+
+<!-- EDIT HERE: header branding/tagline -->
+<header class="page-header">
+  <h1>Sentient Futures: WargamingLLM</h1>
+  <p class="tagline">A configurable multi-agent AI policy wargame</p>
+</header>
 
 <form id="game-form">
-  <fieldset>
+  <fieldset class="panel">
     <legend>Agents</legend>
     <div id="agents"></div>
-    <button type="button" id="add-agent">+ Add agent</button>
+    <button type="button" id="add-agent" class="secondary">+ Add agent</button>
   </fieldset>
 
-  <fieldset>
+  <fieldset class="panel">
     <legend>Judge</legend>
     <label>Model (OpenRouter slug, e.g. anthropic/claude-3.5-sonnet)</label>
+    <!-- EDIT HERE: default judge model -->
     <input type="text" id="judge-model" value="anthropic/claude-3.5-sonnet" />
     <label>Context (background info to ground the judge's rulings)</label>
-    <textarea id="judge-context"></textarea>
+    <!-- EDIT HERE: default judge context -->
+    <textarea id="judge-context">This is a policy wargame about AI's growing role in animal agriculture. Roughly 80 billion land animals are raised for food annually, mostly in industrial confinement systems. AI-driven precision livestock farming is a real, fast-growing market, and regulators currently have no established framework for evaluating AI-driven changes to farm operations.</textarea>
   </fieldset>
 
-  <fieldset>
+  <fieldset class="panel">
     <legend>Game</legend>
     <label>Starting scenario</label>
-    <textarea id="scenario"></textarea>
+    <!-- EDIT HERE: default scenario -->
+    <textarea id="scenario">A major poultry integrator has deployed an AI system that autonomously adjusts stocking density, lighting schedules, and feed formulation in real time to minimize cost-per-pound across its broiler chicken operations. The system has been live for three months. Early production data shows a 4% reduction in cost-per-pound. An animal welfare NGO has just published a report raising questions about what the AI's optimization actually optimized for, and whether anyone outside the company can verify it.</textarea>
     <label>Number of turns</label>
+    <!-- EDIT HERE: default turn count -->
     <input type="number" id="num-turns" value="5" min="1" />
     <label>OpenRouter API key</label>
     <input type="password" id="api-key" placeholder="sk-or-..." />
@@ -54,6 +178,7 @@
 
 <template id="agent-row-template">
   <div class="agent-row">
+    <span class="agent-index"></span>
     <label>Name</label>
     <input type="text" class="agent-name" placeholder="e.g. Poultry Integrator" />
     <label>Objective</label>
@@ -64,23 +189,84 @@
   </div>
 </template>
 
+<!-- EDIT HERE: default agent roster. The page loads with these 8
+     pre-filled (editable) rows so it's runnable immediately with just
+     an API key. Clicking "+ Add agent" beyond this adds blank rows. -->
+<script id="preset-agents" type="application/json">
+[
+  {
+    "name": "Poultry Integrator",
+    "objective": "Maximize profit margin and market share. Minimize regulatory compliance cost. Adopt AI tools that cut cost-per-pound, resist oversight that raises costs without raising revenue.",
+    "model": "anthropic/claude-3.5-sonnet"
+  },
+  {
+    "name": "AgTech Company",
+    "objective": "Drive adoption of its AI/precision-livestock-farming products. Prioritize data collection and investor returns over any single farm's specific outcomes.",
+    "model": "openai/gpt-4o"
+  },
+  {
+    "name": "Regulator",
+    "objective": "Protect food security and political stability. Maintain voter satisfaction. Show nominal welfare compliance without imposing costs that destabilize the food supply chain.",
+    "model": "google/gemini-pro-1.5"
+  },
+  {
+    "name": "Animal Welfare NGO",
+    "objective": "Win measurable welfare improvements and legislative change. Build public awareness and pressure industry and regulators through campaigns, lobbying, and media.",
+    "model": "anthropic/claude-3.5-sonnet"
+  },
+  {
+    "name": "Alternative Protein Startup",
+    "objective": "Reach cost/market parity with conventional meat. Win regulatory approval and consumer adoption, positioning against incumbents whenever it creates an opening.",
+    "model": "openai/gpt-4o"
+  },
+  {
+    "name": "Retail / Fast Food Chain",
+    "objective": "Protect supply chain cost and stability. Manage consumer perception and ESG commitments without meaningfully raising procurement costs.",
+    "model": "anthropic/claude-3.5-sonnet"
+  },
+  {
+    "name": "Consumers",
+    "objective": "A mix of welfare-aware, price-sensitive, and status-quo preferences. Mostly driven by price and convenience, but responsive to high-profile welfare stories.",
+    "model": "openai/gpt-4o"
+  },
+  {
+    "name": "Academic / Scientific Community",
+    "objective": "Pursue research funding and publication. Push for policy influence grounded in evidence, often at odds with both industry and advocacy framing.",
+    "model": "google/gemini-pro-1.5"
+  }
+]
+</script>
+
 <script>
 const agentsContainer = document.getElementById("agents");
 const agentRowTemplate = document.getElementById("agent-row-template");
+const PRESET_AGENTS = JSON.parse(document.getElementById("preset-agents").textContent);
 
-function addAgentRow() {
-  const row = agentRowTemplate.content.cloneNode(true);
-  row.querySelector(".remove-agent").addEventListener("click", (e) => {
-    e.target.closest(".agent-row").remove();
+function renumberAgents() {
+  [...agentsContainer.querySelectorAll(".agent-row")].forEach((row, i) => {
+    row.querySelector(".agent-index").textContent = `Agent ${i + 1}`;
   });
-  agentsContainer.appendChild(row);
 }
 
-document.getElementById("add-agent").addEventListener("click", addAgentRow);
+function addAgentRow(preset) {
+  const row = agentRowTemplate.content.cloneNode(true);
+  if (preset) {
+    row.querySelector(".agent-name").value = preset.name;
+    row.querySelector(".agent-objective").value = preset.objective;
+    row.querySelector(".agent-model").value = preset.model;
+  }
+  row.querySelector(".remove-agent").addEventListener("click", (e) => {
+    e.target.closest(".agent-row").remove();
+    renumberAgents();
+  });
+  agentsContainer.appendChild(row);
+  renumberAgents();
+}
 
-// Start with 2 agent rows so the form isn't empty on first load.
-addAgentRow();
-addAgentRow();
+document.getElementById("add-agent").addEventListener("click", () => addAgentRow());
+
+// Load the page pre-filled with the full preset roster (up to 8 agents).
+PRESET_AGENTS.forEach(addAgentRow);
 
 function collectAgents() {
   return [...agentsContainer.querySelectorAll(".agent-row")].map((row) => ({
@@ -95,7 +281,7 @@ function renderResults(turns) {
   resultsEl.innerHTML = "";
   for (const turn of turns) {
     const turnEl = document.createElement("div");
-    turnEl.className = "turn";
+    turnEl.className = "turn panel";
     let html = `<h3>Turn ${turn.turn_number}</h3><p><strong>Situation:</strong> ${turn.situation}</p>`;
     for (const [name, action] of Object.entries(turn.actions)) {
       html += `<p class="action"><strong>${name}:</strong> ${action}</p>`;
@@ -148,7 +334,37 @@ document.getElementById("game-form").addEventListener("submit", async (e) => {
     submitButton.disabled = false;
   }
 });
+
+// Fetching a relative URL like "/api/run" only works when this page is
+// served over http(s) by the backend itself. If someone double-clicks
+// this file open in a browser instead of running the server, the page
+// loads over file:// and every request will fail immediately - show a
+// clear reason instead of letting them hit a confusing fetch error.
+if (window.location.protocol === "file:") {
+  document.getElementById("file-warning").style.display = "block";
+}
 </script>
+
+<!-- EDIT HERE: about/credit section -->
+<footer id="about">
+  <h2>About this project</h2>
+  <p>
+    WargamingLLM is a configurable multi-agent policy wargame: define any
+    number of stakeholder agents (a name, an objective, and which model
+    plays them), a neutral judge (a model plus background context to
+    ground its rulings), a starting scenario, and a turn count. Each
+    turn, every agent privately decides what it does given the current
+    situation; the judge then resolves all of those actions into a
+    realistic outcome, which becomes the next turn's starting situation.
+    The result is a turn-by-turn transcript of how different interests
+    might actually behave and collide under a given scenario.
+  </p>
+  <p>
+    All model calls run through OpenRouter, so a single API key can
+    drive any mix of models across agents and the judge.
+  </p>
+  <p>Created by Thomas Giovinazzo.</p>
+</footer>
 
 </body>
 </html>

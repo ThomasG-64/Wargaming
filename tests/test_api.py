@@ -68,4 +68,4 @@ def test_run_endpoint_rejects_malformed_body_with_422():
 def test_index_page_is_served():
     response = client.get("/")
     assert response.status_code == 200
-    assert "AI Wargame" in response.text
+    assert "Sentient Futures: WargamingLLM" in response.text

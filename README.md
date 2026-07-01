@@ -52,13 +52,15 @@ transcript. See [the roadmap](#roadmap) below for what's not built yet
 venv\Scripts\python.exe -m uvicorn web.app:app --reload
 ```
 
-Then open http://127.0.0.1:8000 in your browser. Fill in the agents
-(name, objective, an OpenRouter model slug like
-`anthropic/claude-3.5-sonnet`), the judge's model and background
-context, a starting scenario, a turn count, and your OpenRouter key,
-then submit. It's a "submit and wait" design for now — the whole game
-runs before anything appears on the page, which can take a while for
-more agents/turns; live per-turn progress is a possible later upgrade,
+Then open **http://127.0.0.1:8000** in your browser (don't just
+double-click `web/static/index.html` — it needs to be served by the
+running server, and the page will warn you if it detects it wasn't).
+The page loads pre-filled with a full 8-agent example roster, a judge,
+and a scenario, so you can try it immediately with just your own
+OpenRouter key — every field is editable. It's a "submit and wait"
+design for now — the whole game runs before anything appears on the
+page, which can take a while for more agents/turns; live per-turn
+progress is a possible later upgrade,
 not built yet. `web/app.py` is a thin layer over the backend — see
 "The backend API" below for what it actually calls.
 
