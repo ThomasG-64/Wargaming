@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <!-- EDIT HERE: page title / browser tab text -->
-<title>Sentient Futures: WargamingLLM</title>
+<title>WargamingLLM</title>
 <style>
   :root {
     --bg: #f4f6f8;
@@ -26,7 +26,7 @@
     padding: 2.5rem 1.25rem 4rem;
     line-height: 1.5;
   }
-  header.page-header { text-align: center; margin-bottom: 2.5rem; }
+  header.page-header { text-align: center; margin-bottom: 2rem; }
   header.page-header h1 { margin: 0; font-size: 2rem; letter-spacing: -0.02em; }
   header.page-header .tagline { color: var(--muted); margin-top: 0.4rem; font-size: 1.05rem; }
 
@@ -41,6 +41,21 @@
     font-weight: 600;
   }
 
+  /* Tabs */
+  .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.25rem; }
+  .tab-button {
+    flex: 1;
+    background: var(--panel);
+    color: var(--muted);
+    border: 1px solid var(--border);
+    margin-top: 0;
+    font-weight: 700;
+  }
+  .tab-button.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .tab-button:hover:not(.active) { background: #ecf5f4; color: var(--accent-dark); }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
   .panel {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -49,11 +64,17 @@
     margin-bottom: 1.75rem;
     box-shadow: 0 1px 3px rgba(16, 24, 32, 0.06);
   }
-  .panel > legend, .panel > h2 {
-    font-size: 1.05rem;
+  /* Section headers (Agents / Judge / Game) get a solid bubble instead of
+     sitting oddly on the panel's border like a native <legend> would. */
+  .panel-title {
+    display: inline-block;
+    background: var(--accent);
+    color: white;
+    font-size: 0.95rem;
     font-weight: 700;
-    padding: 0 0.25rem;
-    margin: 0 0 1rem 0;
+    padding: 0.3rem 0.9rem;
+    border-radius: 999px;
+    margin: 0 0 1.1rem 0;
   }
 
   .agent-row {
@@ -89,6 +110,9 @@
   }
   input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   textarea { min-height: 3.5rem; resize: vertical; }
+  /* EDIT HERE: how tall the context/scenario boxes start - big enough
+     that the prefilled paragraphs are fully visible without scrolling. */
+  textarea.textarea-large { min-height: 11rem; }
 
   button {
     font: inherit;
@@ -109,12 +133,23 @@
   button.remove-agent:hover { background: var(--danger-bg); }
   button[type=submit] { font-size: 1.05rem; padding: 0.75rem 1.5rem; width: 100%; }
 
-  #status { margin-top: 1rem; font-weight: 600; text-align: center; }
+  #status { margin-top: 1rem; margin-bottom: 1rem; font-weight: 600; text-align: center; }
   #status.error { color: var(--danger); }
 
+  .run-block { margin-bottom: 2.5rem; }
+  .run-block .run-title {
+    display: inline-block;
+    background: var(--accent-dark);
+    color: white;
+    font-weight: 700;
+    padding: 0.35rem 1rem;
+    border-radius: 999px;
+    margin-bottom: 1rem;
+  }
   .turn { border-top: 2px solid var(--accent); padding-top: 0.9rem; margin-top: 1.75rem; }
   .turn h3 { margin-bottom: 0.5rem; }
   .action { margin: 0.5rem 0; }
+  #results-empty { color: var(--muted); text-align: center; padding: 2rem 0; }
 
   footer#about {
     margin-top: 3rem;
@@ -137,48 +172,60 @@
 
 <!-- EDIT HERE: header branding/tagline -->
 <header class="page-header">
-  <h1>Sentient Futures: WargamingLLM</h1>
+  <h1>WargamingLLM</h1>
   <p class="tagline">A configurable multi-agent AI policy wargame</p>
 </header>
 
-<form id="game-form">
-  <fieldset class="panel">
-    <legend>Agents</legend>
-    <div id="agents"></div>
-    <button type="button" id="add-agent" class="secondary">+ Add agent</button>
-  </fieldset>
-
-  <fieldset class="panel">
-    <legend>Judge</legend>
-    <label>Model (OpenRouter slug, e.g. anthropic/claude-sonnet-5)</label>
-    <!-- EDIT HERE: default judge model. Deliberately a step up from the
-         cheap agent models above (anthropic/claude-sonnet-5: $2 / $10
-         per 1M tokens) since the judge's adjudication quality matters
-         more than any single agent's - but not the priciest tier
-         available (e.g. Opus-class models cost far more per token). -->
-    <input type="text" id="judge-model" value="anthropic/claude-sonnet-5" />
-    <label>Context (background info to ground the judge's rulings)</label>
-    <!-- EDIT HERE: default judge context -->
-    <textarea id="judge-context">This is a policy wargame about AI's growing role in animal agriculture. Roughly 80 billion land animals are raised for food annually, mostly in industrial confinement systems. AI-driven precision livestock farming is a real, fast-growing market, and regulators currently have no established framework for evaluating AI-driven changes to farm operations.</textarea>
-  </fieldset>
-
-  <fieldset class="panel">
-    <legend>Game</legend>
-    <label>Starting scenario</label>
-    <!-- EDIT HERE: default scenario -->
-    <textarea id="scenario">A major poultry integrator has deployed an AI system that autonomously adjusts stocking density, lighting schedules, and feed formulation in real time to minimize cost-per-pound across its broiler chicken operations. The system has been live for three months. Early production data shows a 4% reduction in cost-per-pound. An animal welfare NGO has just published a report raising questions about what the AI's optimization actually optimized for, and whether anyone outside the company can verify it.</textarea>
-    <label>Number of turns</label>
-    <!-- EDIT HERE: default turn count -->
-    <input type="number" id="num-turns" value="5" min="1" />
-    <label>OpenRouter API key</label>
-    <input type="password" id="api-key" placeholder="sk-or-..." />
-  </fieldset>
-
-  <button type="submit">Run game</button>
-</form>
+<div class="tabs">
+  <button type="button" class="tab-button active" data-tab="setup">Game Setup</button>
+  <button type="button" class="tab-button" data-tab="results">Results</button>
+</div>
 
 <div id="status"></div>
-<div id="results"></div>
+
+<div id="tab-setup" class="tab-content active">
+  <form id="game-form">
+    <div class="panel">
+      <h2 class="panel-title">Agents</h2>
+      <div id="agents"></div>
+      <button type="button" id="add-agent" class="secondary">+ Add agent</button>
+    </div>
+
+    <div class="panel">
+      <h2 class="panel-title">Judge</h2>
+      <label>Model (OpenRouter slug, e.g. anthropic/claude-sonnet-5)</label>
+      <!-- EDIT HERE: default judge model. Deliberately a step up from the
+           cheap agent models below (anthropic/claude-sonnet-5: $2 / $10
+           per 1M tokens) since the judge's adjudication quality matters
+           more than any single agent's - but not the priciest tier
+           available (e.g. Opus-class models cost far more per token). -->
+      <input type="text" id="judge-model" value="anthropic/claude-sonnet-5" />
+      <label>Context (background info to ground the judge's rulings)</label>
+      <!-- EDIT HERE: default judge context -->
+      <textarea id="judge-context" class="textarea-large">This is a policy wargame about AI's growing role in animal agriculture. Roughly 80 billion land animals are raised for food annually, mostly in industrial confinement systems. AI-driven precision livestock farming is a real, fast-growing market, and regulators currently have no established framework for evaluating AI-driven changes to farm operations.</textarea>
+    </div>
+
+    <div class="panel">
+      <h2 class="panel-title">Game</h2>
+      <label>Starting scenario</label>
+      <!-- EDIT HERE: default scenario -->
+      <textarea id="scenario" class="textarea-large">A major poultry integrator has deployed an AI system that autonomously adjusts stocking density, lighting schedules, and feed formulation in real time to minimize cost-per-pound across its broiler chicken operations. The system has been live for three months. Early production data shows a 4% reduction in cost-per-pound. An animal welfare NGO has just published a report raising questions about what the AI's optimization actually optimized for, and whether anyone outside the company can verify it.</textarea>
+      <label>Number of turns</label>
+      <!-- EDIT HERE: default turn count -->
+      <input type="number" id="num-turns" value="5" min="1" />
+      <label>OpenRouter API key</label>
+      <input type="password" id="api-key" placeholder="sk-or-..." />
+    </div>
+
+    <button type="submit">Run game</button>
+  </form>
+</div>
+
+<div id="tab-results" class="tab-content">
+  <div id="results">
+    <p id="results-empty">No runs yet. Run a game from the Game Setup tab and it'll show up here.</p>
+  </div>
+</div>
 
 <template id="agent-row-template">
   <div class="agent-row">
@@ -253,6 +300,14 @@ const agentsContainer = document.getElementById("agents");
 const agentRowTemplate = document.getElementById("agent-row-template");
 const PRESET_AGENTS = JSON.parse(document.getElementById("preset-agents").textContent);
 
+// --- Tabs ---
+function switchTab(name) {
+  document.querySelectorAll(".tab-button").forEach((b) => b.classList.toggle("active", b.dataset.tab === name));
+  document.querySelectorAll(".tab-content").forEach((c) => c.classList.toggle("active", c.id === `tab-${name}`));
+}
+document.querySelectorAll(".tab-button").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
+
+// --- Agent rows ---
 function renumberAgents() {
   [...agentsContainer.querySelectorAll(".agent-row")].forEach((row, i) => {
     row.querySelector(".agent-index").textContent = `Agent ${i + 1}`;
@@ -287,20 +342,30 @@ function collectAgents() {
   }));
 }
 
-function renderResults(turns) {
+// --- Results (accumulate every run instead of overwriting the last one) ---
+let runCount = 0;
+
+function renderRun(turns) {
+  runCount += 1;
   const resultsEl = document.getElementById("results");
-  resultsEl.innerHTML = "";
+  const emptyMessage = document.getElementById("results-empty");
+  if (emptyMessage) emptyMessage.remove();
+
+  const runEl = document.createElement("div");
+  runEl.className = "run-block";
+  const timestamp = new Date().toLocaleString();
+  let html = `<div class="run-title">Run ${runCount} &middot; ${timestamp}</div>`;
   for (const turn of turns) {
-    const turnEl = document.createElement("div");
-    turnEl.className = "turn panel";
-    let html = `<h3>Turn ${turn.turn_number}</h3><p><strong>Situation:</strong> ${turn.situation}</p>`;
+    html += `<div class="turn panel"><h3>Turn ${turn.turn_number}</h3><p><strong>Situation:</strong> ${turn.situation}</p>`;
     for (const [name, action] of Object.entries(turn.actions)) {
       html += `<p class="action"><strong>${name}:</strong> ${action}</p>`;
     }
-    html += `<p><strong>Outcome:</strong> ${turn.summary}</p>`;
-    turnEl.innerHTML = html;
-    resultsEl.appendChild(turnEl);
+    html += `<p><strong>Outcome:</strong> ${turn.summary}</p></div>`;
   }
+  runEl.innerHTML = html;
+  // Newest run first, so you never have to scroll past old runs to see
+  // the one you just triggered.
+  resultsEl.insertBefore(runEl, resultsEl.firstChild);
 }
 
 document.getElementById("game-form").addEventListener("submit", async (e) => {
@@ -321,7 +386,6 @@ document.getElementById("game-form").addEventListener("submit", async (e) => {
 
   statusEl.className = "";
   statusEl.textContent = "Running... this can take a while for more agents/turns.";
-  document.getElementById("results").innerHTML = "";
   submitButton.disabled = true;
 
   try {
@@ -336,8 +400,9 @@ document.getElementById("game-form").addEventListener("submit", async (e) => {
       throw new Error(data.detail || "Something went wrong.");
     }
 
-    statusEl.textContent = "Done.";
-    renderResults(data);
+    statusEl.textContent = "Done. Results pushed to the Results tab.";
+    renderRun(data);
+    switchTab("results");
   } catch (err) {
     statusEl.className = "error";
     statusEl.textContent = "Error: " + err.message;
@@ -373,6 +438,10 @@ if (window.location.protocol === "file:") {
   <p>
     All model calls run through OpenRouter, so a single API key can
     drive any mix of models across agents and the judge.
+  </p>
+  <p>
+    Inspired in part by the animal-welfare-and-AI research space,
+    including organizations like Sentient Futures.
   </p>
   <p>Created by Thomas Giovinazzo.</p>
 </footer>
