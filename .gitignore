@@ -9,3 +9,6 @@ __pycache__/
 
 # Generated simulation output
 output/
+
+# Local, machine-specific Claude Code settings (keep launch.json, ignore this)
+.claude/settings.local.json

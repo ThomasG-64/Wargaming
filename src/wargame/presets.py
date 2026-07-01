@@ -8,20 +8,45 @@ fixed "the" roster. Full research/reasoning behind each role and each
 scenario's judge context lives in docs/agent_roster.md and
 docs/scenarios.md.
 
-Nothing in here is imported by the engine or the website by default —
-it's a library of presets a script or a future "load example" website
-button can pull from.
+This module is the SINGLE SOURCE OF TRUTH for the content the website
+form loads pre-filled with: web/app.py serves `website_prefill()` at
+GET /api/presets, and web/static/index.html fetches it on load to
+populate its agent rows, judge context, scenario, and turn count. The
+page no longer hardcodes its own copy of any of this — edit the presets
+here and the website's prefill changes with it. (These used to be two
+separate hand-maintained copies that silently drifted apart, which is
+exactly what made the rich objectives below never actually reach a
+model.)
 """
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 
 from wargame.agents import AgentConfig
 from wargame.judge import JudgeConfig
 
-# A reasonably capable, mid-cost default for preset agents. Swap per-agent
-# as needed — see scripts/run_example.py for picking different models per
-# agent/judge deliberately.
-DEFAULT_MODEL = "anthropic/claude-haiku-4.5"
+# Cheapest current-generation model from each major provider (mid-2026
+# OpenRouter pricing), cycled across the 8-agent roster below so a full
+# 8-agent, 5-turn demo game costs a few cents at most:
+#   openai/gpt-5-nano            $0.05 / $0.40 per 1M tokens
+#   anthropic/claude-haiku-4.5   $1    / $5
+#   google/gemini-3.1-flash-lite $0.25 / $1.50
+# Swap any single agent's model freely — see scripts/run_example.py for
+# picking different models per agent/judge deliberately.
+_CHEAP_MODELS = [
+    "openai/gpt-5-nano",
+    "anthropic/claude-haiku-4.5",
+    "google/gemini-3.1-flash-lite",
+]
+
+
+def _cheap_model(index: int) -> str:
+    return _CHEAP_MODELS[index % len(_CHEAP_MODELS)]
+
+
+# Judge is a deliberate step up from the cheap agent models above
+# (claude-sonnet-5: $2 / $10 per 1M tokens) since adjudication quality
+# matters more than any single agent's — but not the priciest tier
+# available (Opus-class models cost far more per token).
 DEFAULT_JUDGE_MODEL = "anthropic/claude-sonnet-5"
 
 
@@ -42,7 +67,7 @@ POULTRY_INTEGRATOR = AgentConfig(
         "management) primarily to cut cost-per-pound, and you frame technology adoption publicly "
         "as a welfare improvement whether or not it demonstrably is one."
     ),
-    model=DEFAULT_MODEL,
+    model=_cheap_model(0),
 )
 
 CONTRACT_GROWER = AgentConfig(
@@ -62,7 +87,7 @@ CONTRACT_GROWER = AgentConfig(
         "(who holds nearly all the leverage in your relationship); you'll ally with whichever "
         "side offers you more bargaining power or income stability in the moment."
     ),
-    model=DEFAULT_MODEL,
+    model=_cheap_model(1),
 )
 
 CORPORATE_CAMPAIGN_NGO = AgentConfig(
@@ -79,7 +104,7 @@ CORPORATE_CAMPAIGN_NGO = AgentConfig(
         "worth little to you, and you will publicly call out backsliding — even from "
         "companies you previously worked with cooperatively."
     ),
-    model=DEFAULT_MODEL,
+    model=_cheap_model(2),
 )
 
 ALT_PROTEIN_INNOVATOR = AgentConfig(
@@ -98,7 +123,7 @@ ALT_PROTEIN_INNOVATOR = AgentConfig(
         "your funding can dry up faster than an advocacy nonprofit's donor base if public "
         "sentiment or investment cycles turn against alt-protein."
     ),
-    model=DEFAULT_MODEL,
+    model=_cheap_model(3),
 )
 
 REGULATOR = AgentConfig(
@@ -119,7 +144,7 @@ REGULATOR = AgentConfig(
         "labeling guidance, not by writing new legislation-level rules, unless directed to by "
         "Congress or the courts."
     ),
-    model=DEFAULT_MODEL,
+    model=_cheap_model(4),
 )
 
 ESG_INVESTORS = AgentConfig(
@@ -139,7 +164,7 @@ ESG_INVESTORS = AgentConfig(
         "it weakens, regardless of the underlying animal-welfare merits — your credibility "
         "with members depends on not looking like an advocacy group in investor's clothing."
     ),
-    model=DEFAULT_MODEL,
+    model=_cheap_model(5),
 )
 
 RETAIL_BUYER = AgentConfig(
@@ -157,7 +182,7 @@ RETAIL_BUYER = AgentConfig(
         "supplier scorecards and long-term purchase contracts as your main lever to actually move "
         "practices upstream, rather than making public statements you can't operationally back."
     ),
-    model=DEFAULT_MODEL,
+    model=_cheap_model(6),
 )
 
 INDUSTRY_DEFENSE_COALITION = AgentConfig(
@@ -175,7 +200,7 @@ INDUSTRY_DEFENSE_COALITION = AgentConfig(
         "factual accuracy when they threaten member interests, and you coordinate messaging "
         "across your member companies so that no single company has to respond to a crisis alone."
     ),
-    model=DEFAULT_MODEL,
+    model=_cheap_model(7),
 )
 
 # All 8, for reference / a full-roster game.
@@ -307,3 +332,25 @@ SCENARIO_PRESETS = [
     REGULATORY_PATHWAY_FIGHT,
     TOURNAMENT_SYSTEM_UNDER_FIRE,
 ]
+
+
+def website_prefill() -> dict:
+    """The default game the website form loads pre-filled with.
+
+    Served by web/app.py at GET /api/presets and consumed by
+    web/static/index.html on load — the one place the page's prefilled
+    content comes from, so the rich rosters/objectives here can't drift
+    away from what a visitor actually sees and submits to a model.
+
+    It's the full 8-agent starter roster, framed by the first scenario
+    preset's judge context, scenario, and turn count. The result is a
+    plain JSON-serializable dict whose shape matches exactly what the
+    /api/run request body expects (minus the visitor-supplied API key).
+    """
+    default_scenario = SCENARIO_PRESETS[0]
+    return {
+        "agents": [asdict(agent) for agent in STARTER_AGENTS],
+        "judge": asdict(default_scenario.judge),
+        "scenario": default_scenario.scenario,
+        "num_turns": default_scenario.num_turns,
+    }

@@ -14,6 +14,7 @@ from pydantic import BaseModel
 
 from wargame.config import GameConfig
 from wargame.engine import run_game
+from wargame.presets import website_prefill
 
 app = FastAPI()
 
@@ -21,10 +22,10 @@ app = FastAPI()
 @app.middleware("http")
 async def no_cache(request, call_next):
     # Without this, browsers can silently serve a stale cached copy of
-    # index.html (and its embedded preset agents/judge/scenario) after
-    # we've pushed changes - you'd edit a preset, redeploy, refresh, and
-    # still see the old one until a hard-refresh happened to bypass the
-    # cache. This is a small personal tool, not a high-traffic site, so
+    # index.html (or the /api/presets prefill it fetches) after we've
+    # pushed changes - you'd edit a preset, redeploy, refresh, and still
+    # see the old one until a hard-refresh happened to bypass the cache.
+    # This is a small personal tool, not a high-traffic site, so
     # trading away caching entirely for "you always see what's actually
     # deployed" is the right default.
     response = await call_next(request)
@@ -71,6 +72,15 @@ def run(request: RunGameRequest):
         raise HTTPException(status_code=502, detail=f"Model call failed: {e}")
 
     return [asdict(turn) for turn in turns]
+
+
+# The default game the page loads pre-filled with. Sourced entirely from
+# wargame.presets so the website's prefill and the Python presets are one
+# and the same thing (see website_prefill's docstring). Like /api/run,
+# this must be declared before the static mount below.
+@app.get("/api/presets")
+def presets():
+    return website_prefill()
 
 
 # Serves web/static/index.html at "/" and anything else in that folder.

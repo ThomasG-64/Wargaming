@@ -194,25 +194,23 @@
     <div class="panel">
       <h2 class="panel-title">Judge</h2>
       <label>Model (OpenRouter slug, e.g. anthropic/claude-sonnet-5)</label>
-      <!-- EDIT HERE: default judge model. Deliberately a step up from the
-           cheap agent models below (anthropic/claude-sonnet-5: $2 / $10
-           per 1M tokens) since the judge's adjudication quality matters
-           more than any single agent's - but not the priciest tier
-           available (e.g. Opus-class models cost far more per token). -->
-      <input type="text" id="judge-model" value="anthropic/claude-sonnet-5" />
+      <!-- Prefilled from GET /api/presets on load. To change the default
+           judge model or context, edit wargame.presets (DEFAULT_JUDGE_MODEL
+           and the first scenario preset's JudgeConfig) - NOT here. These
+           fields intentionally ship empty; the fetch fills them in. -->
+      <input type="text" id="judge-model" />
       <label>Context (background info to ground the judge's rulings)</label>
-      <!-- EDIT HERE: default judge context -->
-      <textarea id="judge-context" class="textarea-large">This is a policy wargame about AI's growing role in animal agriculture. Roughly 80 billion land animals are raised for food annually, mostly in industrial confinement systems. AI-driven precision livestock farming is a real, fast-growing market, and regulators currently have no established framework for evaluating AI-driven changes to farm operations.</textarea>
+      <textarea id="judge-context" class="textarea-large"></textarea>
     </div>
 
     <div class="panel">
       <h2 class="panel-title">Game</h2>
       <label>Starting scenario</label>
-      <!-- EDIT HERE: default scenario -->
-      <textarea id="scenario" class="textarea-large">A major poultry integrator has deployed an AI system that autonomously adjusts stocking density, lighting schedules, and feed formulation in real time to minimize cost-per-pound across its broiler chicken operations. The system has been live for three months. Early production data shows a 4% reduction in cost-per-pound. An animal welfare NGO has just published a report raising questions about what the AI's optimization actually optimized for, and whether anyone outside the company can verify it.</textarea>
+      <!-- Prefilled from GET /api/presets on load (the first scenario
+           preset in wargame.presets). Edit it there, not here. -->
+      <textarea id="scenario" class="textarea-large"></textarea>
       <label>Number of turns</label>
-      <!-- EDIT HERE: default turn count -->
-      <input type="number" id="num-turns" value="5" min="1" />
+      <input type="number" id="num-turns" min="1" />
       <label>OpenRouter API key</label>
       <input type="password" id="api-key" placeholder="sk-or-..." />
     </div>
@@ -240,65 +238,9 @@
   </div>
 </template>
 
-<!-- EDIT HERE: default agent roster. The page loads with these 8
-     pre-filled (editable) rows so it's runnable immediately with just
-     an API key. Clicking "+ Add agent" beyond this adds blank rows.
-
-     Agent models are set to the cheapest current-generation model from
-     each provider (as of mid-2026 OpenRouter pricing): openai/gpt-5-nano
-     ($0.05 / $0.4 per 1M tokens), anthropic/claude-haiku-4.5 ($1 / $5),
-     google/gemini-3.1-flash-lite ($0.25 / $1.5) - cycled across the 8
-     agents. A 5-turn, 8-agent run on these costs a few cents at most.
-     Swap any agent's model string to try a pricier/different one. -->
-<script id="preset-agents" type="application/json">
-[
-  {
-    "name": "Poultry Integrator",
-    "objective": "Maximize profit margin and market share. Minimize regulatory compliance cost. Adopt AI tools that cut cost-per-pound, resist oversight that raises costs without raising revenue.",
-    "model": "openai/gpt-5-nano"
-  },
-  {
-    "name": "AgTech Company",
-    "objective": "Drive adoption of its AI/precision-livestock-farming products. Prioritize data collection and investor returns over any single farm's specific outcomes.",
-    "model": "anthropic/claude-haiku-4.5"
-  },
-  {
-    "name": "Regulator",
-    "objective": "Protect food security and political stability. Maintain voter satisfaction. Show nominal welfare compliance without imposing costs that destabilize the food supply chain.",
-    "model": "google/gemini-3.1-flash-lite"
-  },
-  {
-    "name": "Animal Welfare NGO",
-    "objective": "Win measurable welfare improvements and legislative change. Build public awareness and pressure industry and regulators through campaigns, lobbying, and media.",
-    "model": "openai/gpt-5-nano"
-  },
-  {
-    "name": "Alternative Protein Startup",
-    "objective": "Reach cost/market parity with conventional meat. Win regulatory approval and consumer adoption, positioning against incumbents whenever it creates an opening.",
-    "model": "anthropic/claude-haiku-4.5"
-  },
-  {
-    "name": "Retail / Fast Food Chain",
-    "objective": "Protect supply chain cost and stability. Manage consumer perception and ESG commitments without meaningfully raising procurement costs.",
-    "model": "google/gemini-3.1-flash-lite"
-  },
-  {
-    "name": "Consumers",
-    "objective": "A mix of welfare-aware, price-sensitive, and status-quo preferences. Mostly driven by price and convenience, but responsive to high-profile welfare stories.",
-    "model": "openai/gpt-5-nano"
-  },
-  {
-    "name": "Academic / Scientific Community",
-    "objective": "Pursue research funding and publication. Push for policy influence grounded in evidence, often at odds with both industry and advocacy framing.",
-    "model": "anthropic/claude-haiku-4.5"
-  }
-]
-</script>
-
 <script>
 const agentsContainer = document.getElementById("agents");
 const agentRowTemplate = document.getElementById("agent-row-template");
-const PRESET_AGENTS = JSON.parse(document.getElementById("preset-agents").textContent);
 
 // --- Tabs ---
 function switchTab(name) {
@@ -331,8 +273,32 @@ function addAgentRow(preset) {
 
 document.getElementById("add-agent").addEventListener("click", () => addAgentRow());
 
-// Load the page pre-filled with the full preset roster (up to 8 agents).
-PRESET_AGENTS.forEach(addAgentRow);
+// Load the page pre-filled from the backend's presets (GET /api/presets),
+// which is served straight from wargame.presets - the single source of
+// truth for both this form's defaults and the Python presets. Nothing here
+// is hardcoded, so the two can't drift apart.
+async function loadPresets() {
+  const statusEl = document.getElementById("status");
+  try {
+    const response = await fetch("/api/presets");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const preset = await response.json();
+    preset.agents.forEach(addAgentRow);
+    document.getElementById("judge-model").value = preset.judge.model;
+    document.getElementById("judge-context").value = preset.judge.context;
+    document.getElementById("scenario").value = preset.scenario;
+    document.getElementById("num-turns").value = preset.num_turns;
+  } catch (err) {
+    // Leave the form blank but usable, and say why it's empty rather than
+    // failing silently. (The file:// case is handled separately below.)
+    if (window.location.protocol !== "file:") {
+      statusEl.className = "error";
+      statusEl.textContent = "Couldn't load the example presets: " + err.message + ". You can still fill the form in manually.";
+    }
+    addAgentRow();
+  }
+}
+loadPresets();
 
 function collectAgents() {
   return [...agentsContainer.querySelectorAll(".agent-row")].map((row) => ({
