@@ -59,6 +59,7 @@ def run_turn(
 
 
 def run_game(config: GameConfig) -> list[TurnRecord]:
+    config.validate()  # fail fast with a clear message before spending any API calls
     turns = []
     situation = config.scenario
     for turn_number in range(1, config.num_turns + 1):

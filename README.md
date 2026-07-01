@@ -56,24 +56,48 @@ Markdown transcript to `output/` (gitignored).
 
 ## The backend API
 
+This is the exact seam a web route will use: parse the request body into
+a dict, build a `GameConfig` from it with `from_dict` (plain
+`GameConfig(**data)` does *not* work — see the docstring on
+`from_dict` for why), run the game, serialize the result.
+
 ```python
-from wargame.agents import AgentConfig
-from wargame.judge import JudgeConfig
+from dataclasses import asdict
 from wargame.config import GameConfig
 from wargame.engine import run_game
 
-config = GameConfig(
-    agents=[AgentConfig(name="...", objective="...", model="anthropic/claude-3.5-sonnet")],
-    judge=JudgeConfig(model="anthropic/claude-3.5-sonnet", context="..."),
-    scenario="...",
-    num_turns=5,
-    openrouter_api_key="...",
-)
-turns = run_game(config)  # list[TurnRecord]
+config = GameConfig.from_dict({
+    "agents": [
+        {"name": "...", "objective": "...", "model": "anthropic/claude-3.5-sonnet"},
+    ],
+    "judge": {"model": "anthropic/claude-3.5-sonnet", "context": "..."},
+    "scenario": "...",
+    "num_turns": 5,
+    "openrouter_api_key": "...",
+})
+
+turns = run_game(config)               # raises ValueError with a specific,
+                                        # user-facing message if input is invalid
+turns_json = [asdict(t) for t in turns]  # plain JSON-serializable dicts
 ```
 
 `model` fields are OpenRouter model slugs — browse options at
 https://openrouter.ai/models.
+
+## Testing without a live API key
+
+Every module has been verified end-to-end without spending any real API
+calls, using litellm's own `mock_response` feature (it lets a real
+`litellm.completion()` call run through its normal request-building path
+and return a scripted reply instead of hitting the network) — see
+`tests/test_llm.py` and `tests/test_integration.py`. This confirms the
+OpenRouter routing, request shape, and full multi-agent/multi-turn loop
+all work correctly; the only thing untested is an actual live model
+reply, which needs a real key. Run everything with:
+
+```
+venv\Scripts\python.exe -m pytest tests/ -v
+```
 
 ## Project layout
 
