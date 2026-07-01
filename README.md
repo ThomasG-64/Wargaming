@@ -1,18 +1,29 @@
 # AI-Assisted Wargaming for Animal Welfare
 
-An LLM-powered multi-stakeholder policy wargame that simulates how AI's
-growing role in decision-making (corporate, regulatory, individual)
-shapes animal welfare outcomes. Stakeholder agents (industry, regulators,
-NGOs, ...) respond turn-by-turn to escalating scenarios; a referee agent
-adjudicates outcomes each turn.
+A configurable multi-agent policy wargame backend. You define any number
+of stakeholder agents (a name, an objective, and which model plays them),
+a judge (a model plus background context to ground its rulings), a
+starting scenario, and a turn count — the engine runs the simulation and
+returns a judge-adjudicated turn-by-turn transcript. Every model call
+goes through [OpenRouter](https://openrouter.ai/), so one API key covers
+any model any agent picks.
 
-See [docs/research-plan.docx](docs/research-plan.docx) for the full
-research background and rationale.
+This is being built as a backend-first project: the goal is a website
+where all of the above (agents, judge, scenario, turns, your OpenRouter
+key) are just form fields. See `src/wargame/config.py`'s `GameConfig` —
+that's the exact object a web request will build and hand to
+`engine.run_game()`.
+
+See [docs/research-plan.docx](docs/research-plan.docx) for the original
+research background and rationale (note: the project has since pivoted
+to a fully user-configurable design rather than the fixed animal-welfare
+scenario/agents described there).
 
 ## Status
 
-Week 1 prototype: 3 agents, 1 scenario ("The Optimizer"), 5-turn
-automated simulation. See [the roadmap](#roadmap) below.
+Backend prototype: fully configurable agents/judge/scenario/turn-count,
+run via an example script. No web interface yet. See
+[the roadmap](#roadmap) below.
 
 ## Setup
 
@@ -26,23 +37,49 @@ automated simulation. See [the roadmap](#roadmap) below.
    ```
    pip install -r requirements.txt
    ```
-4. Copy `.env.example` to `.env` and fill in at least one API key
-   (e.g. `ANTHROPIC_API_KEY`). Different agents can use different
-   providers/models — see `src/wargame/agents.py`.
+4. Copy `.env.example` to `.env` and add your OpenRouter key
+   (get one at https://openrouter.ai/). This key is only read locally
+   by the demo script below — the backend itself takes the key as a
+   parameter, since a real website passes each visitor's own key per
+   request.
 
-## Running the prototype
+## Running the example game
 
 ```
-venv\Scripts\python.exe scripts/run_prototype.py
+venv\Scripts\python.exe scripts/run_example.py
 ```
 
-Writes a Markdown transcript to `output/` (gitignored).
+Edit `scripts/run_example.py` directly to try your own agents, judge
+context, scenario, or turn count — everything in `EXAMPLE_CONFIG` there
+is exactly what a website form will eventually collect. Writes a
+Markdown transcript to `output/` (gitignored).
+
+## The backend API
+
+```python
+from wargame.agents import AgentConfig
+from wargame.judge import JudgeConfig
+from wargame.config import GameConfig
+from wargame.engine import run_game
+
+config = GameConfig(
+    agents=[AgentConfig(name="...", objective="...", model="anthropic/claude-3.5-sonnet")],
+    judge=JudgeConfig(model="anthropic/claude-3.5-sonnet", context="..."),
+    scenario="...",
+    num_turns=5,
+    openrouter_api_key="...",
+)
+turns = run_game(config)  # list[TurnRecord]
+```
+
+`model` fields are OpenRouter model slugs — browse options at
+https://openrouter.ai/models.
 
 ## Project layout
 
 ```
-src/wargame/    importable package: agents, scenarios, the turn engine, the LLM wrapper
-scripts/        entry-point scripts that use the package
+src/wargame/    importable package: agents, judge, game config, the turn engine, the LLM wrapper
+scripts/        entry-point scripts that use the package (run_example.py)
 tests/          automated tests (no API key required)
 docs/           design docs
 output/         generated transcripts (gitignored)
@@ -50,7 +87,6 @@ output/         generated transcripts (gitignored)
 
 ## Roadmap
 
-- **Week 1** — foundation: 3 agents, 1 scenario, 5-turn loop, multi-model support. *(current)*
-- **Week 2** — more scenarios + agents, welfare-scoring module.
-- **Week 3** — hybrid human/AI mode, structured JSON output, agent memory across turns.
-- **Week 4** — polish, sample transcripts, open-sourcing readiness.
+- **Backend prototype** — configurable agents/judge/scenario/turns, OpenRouter-backed, runnable via example script. *(current)*
+- **Next** — welfare/outcome-scoring module, structured JSON output (not just Markdown), agent memory across turns.
+- **Later** — web frontend calling `GameConfig`/`run_game` directly.

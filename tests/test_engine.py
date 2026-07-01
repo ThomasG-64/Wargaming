@@ -7,44 +7,57 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from wargame import engine
-from wargame.agents import Agent
-from wargame.scenarios import Scenario
+from wargame.agents import AgentConfig
+from wargame.config import GameConfig
+from wargame.judge import JudgeConfig
 
 
 def test_run_turn_collects_an_action_per_agent_and_a_summary(monkeypatch):
     # Replace the real LLM call with a fake one that just echoes back
-    # which agent/model called it, so we can test the loop's wiring
-    # without needing an API key or making network calls.
-    def fake_call_agent(model, system_prompt, user_prompt):
+    # which model called it, so we can test the loop's wiring without
+    # needing an API key or making network calls.
+    def fake_call_agent(model, system_prompt, user_prompt, api_key):
         return f"fake response from {model}"
 
     monkeypatch.setattr(engine, "call_agent", fake_call_agent)
 
     agents = [
-        Agent(name="A", objective="x", system_prompt="sys-a"),
-        Agent(name="B", objective="y", system_prompt="sys-b"),
+        AgentConfig(name="A", objective="x", model="model-a"),
+        AgentConfig(name="B", objective="y", model="model-b"),
     ]
+    judge = JudgeConfig(model="judge-model", context="some context")
 
-    record = engine.run_turn(turn_number=1, situation="opening situation", agents=agents)
+    record = engine.run_turn(
+        turn_number=1,
+        situation="opening situation",
+        agents=agents,
+        judge=judge,
+        api_key="fake-key",
+    )
 
     assert record.turn_number == 1
     assert set(record.actions.keys()) == {"A", "B"}
-    assert record.summary == "fake response from claude-sonnet-4-5-20250929"
+    assert record.summary == "fake response from judge-model"
 
 
-def test_run_simulation_chains_situation_forward(monkeypatch):
+def test_run_game_chains_situation_forward(monkeypatch):
     call_count = {"n": 0}
 
-    def fake_call_agent(model, system_prompt, user_prompt):
+    def fake_call_agent(model, system_prompt, user_prompt, api_key):
         call_count["n"] += 1
         return f"summary #{call_count['n']}"
 
     monkeypatch.setattr(engine, "call_agent", fake_call_agent)
 
-    agents = [Agent(name="A", objective="x", system_prompt="sys-a")]
-    scenario = Scenario(name="Test Scenario", opening_situation="turn 0 situation")
+    config = GameConfig(
+        agents=[AgentConfig(name="A", objective="x", model="model-a")],
+        judge=JudgeConfig(model="judge-model", context="context"),
+        scenario="turn 0 situation",
+        num_turns=3,
+        openrouter_api_key="fake-key",
+    )
 
-    turns = engine.run_simulation(scenario, agents, num_turns=3)
+    turns = engine.run_game(config)
 
     assert len(turns) == 3
     assert turns[0].situation == "turn 0 situation"
