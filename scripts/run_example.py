@@ -40,7 +40,7 @@ EXAMPLE_CONFIG = GameConfig(
                 "compliance cost. Adopt AI tools that cut cost-per-pound, resist "
                 "oversight that raises costs without raising revenue."
             ),
-            model="anthropic/claude-3.5-sonnet",
+            model="openai/gpt-5-nano",
         ),
         AgentConfig(
             name="Regulator",
@@ -49,7 +49,7 @@ EXAMPLE_CONFIG = GameConfig(
                 "satisfaction. Show nominal welfare compliance without imposing "
                 "costs that destabilize the food supply chain."
             ),
-            model="openai/gpt-4o",
+            model="google/gemini-3.1-flash-lite",
         ),
         AgentConfig(
             name="Animal Welfare NGO",
@@ -58,11 +58,15 @@ EXAMPLE_CONFIG = GameConfig(
                 "Build public awareness and pressure industry and regulators "
                 "through campaigns, lobbying, and media."
             ),
-            model="anthropic/claude-3.5-sonnet",
+            model="anthropic/claude-haiku-4.5",
         ),
     ],
+    # Judge deliberately a step up from the cheap agent models above
+    # (claude-sonnet-5: $2/$10 per 1M tokens vs. haiku's $1/$5) since
+    # adjudication quality matters more than any single agent's - but
+    # not the priciest tier available (e.g. Opus-class models).
     judge=JudgeConfig(
-        model="anthropic/claude-3.5-sonnet",
+        model="anthropic/claude-sonnet-5",
         context=(
             "This is a policy wargame about AI's growing role in animal "
             "agriculture. Roughly 80 billion land animals are raised for food "

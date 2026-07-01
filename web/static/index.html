@@ -150,9 +150,13 @@
 
   <fieldset class="panel">
     <legend>Judge</legend>
-    <label>Model (OpenRouter slug, e.g. anthropic/claude-3.5-sonnet)</label>
-    <!-- EDIT HERE: default judge model -->
-    <input type="text" id="judge-model" value="anthropic/claude-3.5-sonnet" />
+    <label>Model (OpenRouter slug, e.g. anthropic/claude-sonnet-5)</label>
+    <!-- EDIT HERE: default judge model. Deliberately a step up from the
+         cheap agent models above (anthropic/claude-sonnet-5: $2 / $10
+         per 1M tokens) since the judge's adjudication quality matters
+         more than any single agent's - but not the priciest tier
+         available (e.g. Opus-class models cost far more per token). -->
+    <input type="text" id="judge-model" value="anthropic/claude-sonnet-5" />
     <label>Context (background info to ground the judge's rulings)</label>
     <!-- EDIT HERE: default judge context -->
     <textarea id="judge-context">This is a policy wargame about AI's growing role in animal agriculture. Roughly 80 billion land animals are raised for food annually, mostly in industrial confinement systems. AI-driven precision livestock farming is a real, fast-growing market, and regulators currently have no established framework for evaluating AI-driven changes to farm operations.</textarea>
@@ -184,55 +188,62 @@
     <label>Objective</label>
     <textarea class="agent-objective" placeholder="What does this agent want?"></textarea>
     <label>Model (OpenRouter slug)</label>
-    <input type="text" class="agent-model" placeholder="e.g. anthropic/claude-3.5-sonnet" />
+    <input type="text" class="agent-model" placeholder="e.g. openai/gpt-5-nano" />
     <button type="button" class="remove-agent">Remove</button>
   </div>
 </template>
 
 <!-- EDIT HERE: default agent roster. The page loads with these 8
      pre-filled (editable) rows so it's runnable immediately with just
-     an API key. Clicking "+ Add agent" beyond this adds blank rows. -->
+     an API key. Clicking "+ Add agent" beyond this adds blank rows.
+
+     Agent models are set to the cheapest current-generation model from
+     each provider (as of mid-2026 OpenRouter pricing): openai/gpt-5-nano
+     ($0.05 / $0.4 per 1M tokens), anthropic/claude-haiku-4.5 ($1 / $5),
+     google/gemini-3.1-flash-lite ($0.25 / $1.5) - cycled across the 8
+     agents. A 5-turn, 8-agent run on these costs a few cents at most.
+     Swap any agent's model string to try a pricier/different one. -->
 <script id="preset-agents" type="application/json">
 [
   {
     "name": "Poultry Integrator",
     "objective": "Maximize profit margin and market share. Minimize regulatory compliance cost. Adopt AI tools that cut cost-per-pound, resist oversight that raises costs without raising revenue.",
-    "model": "anthropic/claude-3.5-sonnet"
+    "model": "openai/gpt-5-nano"
   },
   {
     "name": "AgTech Company",
     "objective": "Drive adoption of its AI/precision-livestock-farming products. Prioritize data collection and investor returns over any single farm's specific outcomes.",
-    "model": "openai/gpt-4o"
+    "model": "anthropic/claude-haiku-4.5"
   },
   {
     "name": "Regulator",
     "objective": "Protect food security and political stability. Maintain voter satisfaction. Show nominal welfare compliance without imposing costs that destabilize the food supply chain.",
-    "model": "google/gemini-pro-1.5"
+    "model": "google/gemini-3.1-flash-lite"
   },
   {
     "name": "Animal Welfare NGO",
     "objective": "Win measurable welfare improvements and legislative change. Build public awareness and pressure industry and regulators through campaigns, lobbying, and media.",
-    "model": "anthropic/claude-3.5-sonnet"
+    "model": "openai/gpt-5-nano"
   },
   {
     "name": "Alternative Protein Startup",
     "objective": "Reach cost/market parity with conventional meat. Win regulatory approval and consumer adoption, positioning against incumbents whenever it creates an opening.",
-    "model": "openai/gpt-4o"
+    "model": "anthropic/claude-haiku-4.5"
   },
   {
     "name": "Retail / Fast Food Chain",
     "objective": "Protect supply chain cost and stability. Manage consumer perception and ESG commitments without meaningfully raising procurement costs.",
-    "model": "anthropic/claude-3.5-sonnet"
+    "model": "google/gemini-3.1-flash-lite"
   },
   {
     "name": "Consumers",
     "objective": "A mix of welfare-aware, price-sensitive, and status-quo preferences. Mostly driven by price and convenience, but responsive to high-profile welfare stories.",
-    "model": "openai/gpt-4o"
+    "model": "openai/gpt-5-nano"
   },
   {
     "name": "Academic / Scientific Community",
     "objective": "Pursue research funding and publication. Push for policy influence grounded in evidence, often at odds with both industry and advocacy framing.",
-    "model": "google/gemini-pro-1.5"
+    "model": "anthropic/claude-haiku-4.5"
   }
 ]
 </script>
