@@ -43,7 +43,8 @@ def test_full_game_runs_end_to_end_with_mocked_model_calls(monkeypatch):
         openrouter_api_key="fake-key",
     )
 
-    turns = run_game(config)
+    result = run_game(config)
+    turns = result.turns
 
     assert len(turns) == 3
     # every agent produced an action every turn
@@ -56,8 +57,12 @@ def test_full_game_runs_end_to_end_with_mocked_model_calls(monkeypatch):
     assert turns[1].situation == turns[0].summary
     assert turns[2].situation == turns[1].summary
 
-    # 2 agents + 1 judge per turn, 3 turns = 9 real (mocked) litellm calls
-    assert len(call_log) == 9
+    # the judge wrote an after-action summary as the very last call
+    assert result.final_summary == f"reply #{len(call_log)} from openrouter/anthropic/claude-3.5-sonnet"
+
+    # 2 agents + 1 judge per turn over 3 turns, + 1 final summary = 10
+    # real (mocked) litellm calls
+    assert len(call_log) == 10
     # both agents' models got prefixed for OpenRouter correctly
     assert "openrouter/anthropic/claude-3.5-sonnet" in call_log
     assert "openrouter/openai/gpt-4o" in call_log

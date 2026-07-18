@@ -23,6 +23,7 @@ from wargame.agents import AgentConfig
 from wargame.config import GameConfig
 from wargame.engine import run_game
 from wargame.judge import JudgeConfig
+from wargame.judge_context import JUDGE_CONTEXT_LIBRARY
 
 # load_dotenv() is a convenience for running this demo script locally —
 # it reads OPENROUTER_API_KEY out of your .env file. A real backend
@@ -65,17 +66,9 @@ EXAMPLE_CONFIG = GameConfig(
     # (claude-sonnet-5: $2/$10 per 1M tokens vs. haiku's $1/$5) since
     # adjudication quality matters more than any single agent's - but
     # not the priciest tier available (e.g. Opus-class models).
-    judge=JudgeConfig(
-        model="anthropic/claude-sonnet-5",
-        context=(
-            "This is a policy wargame about AI's growing role in animal "
-            "agriculture. Roughly 80 billion land animals are raised for food "
-            "annually, mostly in industrial confinement systems. AI-driven "
-            "precision livestock farming is a real, fast-growing market, and "
-            "regulators currently have no established framework for "
-            "evaluating AI-driven changes to farm operations."
-        ),
-    ),
+    # The context is the same shared factual library every game uses
+    # (website and batch runs alike) — see src/wargame/judge_context.py.
+    judge=JudgeConfig(model="anthropic/claude-sonnet-5", context=JUDGE_CONTEXT_LIBRARY),
     scenario=(
         "A major poultry integrator has deployed an AI system that "
         "autonomously adjusts stocking density, lighting schedules, and feed "
@@ -91,9 +84,11 @@ EXAMPLE_CONFIG = GameConfig(
 )
 
 
-def write_transcript(turns, output_path: Path) -> None:
+def write_transcript(result, output_path: Path) -> None:
     lines = ["# Example game — simulation transcript\n"]
-    for turn in turns:
+    lines.append("## After-action summary (judge)\n")
+    lines.append(f"{result.final_summary}\n")
+    for turn in result.turns:
         lines.append(f"## Turn {turn.turn_number}\n")
         lines.append(f"**Situation:** {turn.situation}\n")
         for agent_name, action in turn.actions.items():
@@ -109,13 +104,13 @@ def main():
         )
 
     print(f"Running example game with {len(EXAMPLE_CONFIG.agents)} agents for {EXAMPLE_CONFIG.num_turns} turns...")
-    turns = run_game(EXAMPLE_CONFIG)
+    result = run_game(EXAMPLE_CONFIG)
 
     output_dir = Path(__file__).resolve().parent.parent / "output"
     output_dir.mkdir(exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
     output_path = output_dir / f"transcript-{timestamp}.md"
-    write_transcript(turns, output_path)
+    write_transcript(result, output_path)
 
     print(f"Done. Transcript written to {output_path}")
 

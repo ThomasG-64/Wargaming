@@ -1,28 +1,30 @@
-"""Ready-to-use example content: 8 stakeholder agents grounded in real
-animal-welfare-in-agriculture actors, and 3 scenario presets built from
-subsets of them.
+"""The website's fixed content library: 8 stakeholder agents grounded in
+real animal-welfare-in-agriculture actors, a fixed judge context, and 6
+scenario presets built from subsets of the roster.
 
-This is *example* data, same spirit as scripts/run_example.py — a
-starting roster and a few worked scenarios to run as-is or edit, not a
-fixed "the" roster. Full research/reasoning behind each role and each
-scenario's judge context lives in docs/agent_roster.md and
-docs/scenarios.md.
+Unlike scripts/run_example.py (where everything is free-form Python you
+edit), the website treats this module as a *fixed library*: visitors
+pick agents from AGENT_LIBRARY (viewing but not editing their
+objectives), the judge's grounding context is always
+DEFAULT_JUDGE_CONTEXT, and the only free inputs are which agents to
+include, which model plays each of them, the judge's model, the starting
+scenario, and the turn count. Full research/reasoning behind each role
+lives in docs/agent_roster.md and docs/scenarios.md.
 
-This module is the SINGLE SOURCE OF TRUTH for the content the website
-form loads pre-filled with: web/app.py serves `website_prefill()` at
-GET /api/presets, and web/static/index.html fetches it on load to
-populate its agent rows, judge context, scenario, and turn count. The
-page no longer hardcodes its own copy of any of this — edit the presets
-here and the website's prefill changes with it. (These used to be two
-separate hand-maintained copies that silently drifted apart, which is
-exactly what made the rich objectives below never actually reach a
-model.)
+This module is the SINGLE SOURCE OF TRUTH for that library: web/app.py
+serves `website_prefill()` at GET /api/presets (which the page fetches
+on load to build its agent picker and prefill the form) and resolves
+each submitted agent name back to its objective through AGENT_LIBRARY
+at /api/run time. The page never sees or sends objectives — edit them
+here and both the picker's preview and what actually reaches a model
+change together.
 """
 
 from dataclasses import asdict, dataclass
 
 from wargame.agents import AgentConfig
 from wargame.judge import JudgeConfig
+from wargame.judge_context import JUDGE_CONTEXT_LIBRARY
 
 # Cheapest current-generation model from each major provider (mid-2026
 # OpenRouter pricing), cycled across the 8-agent roster below so a full
@@ -48,6 +50,54 @@ def _cheap_model(index: int) -> str:
 # matters more than any single agent's — but not the priciest tier
 # available (Opus-class models cost far more per token).
 DEFAULT_JUDGE_MODEL = "anthropic/claude-sonnet-5"
+
+# Defaults the website swaps model fields to when the visitor switches
+# the run backend to "claude_code" (the local Claude Code CLI). That
+# backend only reaches Anthropic models and names them by Anthropic
+# model id / CLI alias, not OpenRouter slug — same cheap-agents /
+# one-step-up-judge philosophy as above.
+CLAUDE_CODE_DEFAULT_AGENT_MODEL = "claude-haiku-4-5"
+CLAUDE_CODE_DEFAULT_JUDGE_MODEL = "claude-sonnet-5"
+
+
+# The curated model menus the website's dropdowns offer, per backend.
+# Deliberately a short, opinionated list — current-generation models
+# spanning cheap-to-flagship across the major providers — instead of
+# OpenRouter's full thousand-model catalog. web/app.py rejects any model
+# outside the active backend's list, so this is also the server-side
+# allowlist. EDIT HERE to add/retire models as pricing and generations
+# shift (labels are what the visitor sees; values are what the backend
+# gets). Slugs are OpenRouter's mid-2026 catalog — if a provider renames
+# a model, a run with it will fail with that provider's error, and the
+# fix is a one-line edit here.
+OPENROUTER_MODEL_CHOICES = [
+    # OpenAI
+    {"label": "GPT-5 Nano — OpenAI, cheapest", "value": "openai/gpt-5-nano"},
+    {"label": "GPT-5 Mini — OpenAI, budget", "value": "openai/gpt-5-mini"},
+    {"label": "GPT-5.1 — OpenAI, flagship", "value": "openai/gpt-5.1"},
+    # Anthropic
+    {"label": "Claude Haiku 4.5 — Anthropic, fast & cheap", "value": "anthropic/claude-haiku-4.5"},
+    {"label": "Claude Sonnet 5 — Anthropic, balanced", "value": "anthropic/claude-sonnet-5"},
+    {"label": "Claude Opus 4.8 — Anthropic, most capable", "value": "anthropic/claude-opus-4.8"},
+    # Google
+    {"label": "Gemini 3.1 Flash Lite — Google, cheapest", "value": "google/gemini-3.1-flash-lite"},
+    {"label": "Gemini 3.1 Flash — Google, balanced", "value": "google/gemini-3.1-flash"},
+    {"label": "Gemini 3 Pro — Google, flagship", "value": "google/gemini-3-pro"},
+    # Open-weights / other labs
+    {"label": "Qwen3 235B — Alibaba, open-weights", "value": "qwen/qwen3-235b-a22b"},
+    {"label": "DeepSeek V3 — DeepSeek, open-weights & cheap", "value": "deepseek/deepseek-chat"},
+    {"label": "Llama 4 Maverick — Meta, open-weights", "value": "meta-llama/llama-4-maverick"},
+    {"label": "Kimi K2 — Moonshot, open-weights", "value": "moonshotai/kimi-k2"},
+    {"label": "Grok 4 — xAI, flagship", "value": "x-ai/grok-4"},
+]
+
+# The Claude Code CLI backend can only reach Anthropic models, so its
+# menu is exactly the Claude lineup, named by Anthropic model id.
+CLAUDE_CODE_MODEL_CHOICES = [
+    {"label": "Claude Haiku 4.5 — fast & cheap", "value": "claude-haiku-4-5"},
+    {"label": "Claude Sonnet 5 — balanced", "value": "claude-sonnet-5"},
+    {"label": "Claude Opus 4.8 — most capable", "value": "claude-opus-4-8"},
+]
 
 
 POULTRY_INTEGRATOR = AgentConfig(
@@ -215,6 +265,21 @@ STARTER_AGENTS = [
     INDUSTRY_DEFENSE_COALITION,
 ]
 
+# The fixed roster the website's "Add agent" picker offers, keyed by the
+# exact name the page submits back to /api/run. The website never sends
+# an objective — web/app.py looks each chosen name up here, so the rich
+# objectives above are the only ones that can ever reach a model.
+AGENT_LIBRARY = {agent.name: agent for agent in STARTER_AGENTS}
+
+
+# The judge's grounding context is the same everywhere: one detailed,
+# scenario-independent factual library (see judge_context.py) used by
+# website runs and code/batch runs alike, so results are comparable
+# across both. It's a library of real cases, events, and trends that
+# informs adjudication without deciding it; the rules for HOW to
+# adjudicate live in judge.py's fixed prompt.
+DEFAULT_JUDGE_CONTEXT = JUDGE_CONTEXT_LIBRARY
+
 
 @dataclass
 class ScenarioPreset:
@@ -228,24 +293,7 @@ class ScenarioPreset:
 CAGE_FREE_RECKONING = ScenarioPreset(
     title="Cage-Free Reckoning",
     agents=[RETAIL_BUYER, CORPORATE_CAMPAIGN_NGO, POULTRY_INTEGRATOR, ESG_INVESTORS, INDUSTRY_DEFENSE_COALITION],
-    judge=JudgeConfig(
-        model=DEFAULT_JUDGE_MODEL,
-        context=(
-            "This is a wargame about corporate animal-welfare commitments and accountability in "
-            "the US egg supply chain. Roughly half of the US egg-laying flock is now cage-free, "
-            "up from a small fraction a decade ago, driven by corporate pledges won through "
-            "advocacy pressure starting around 2015. But cage-free hen capacity has repeatedly "
-            "lagged the combined demand from every company that pledged a deadline. At least one "
-            "major retailer has already publicly abandoned a stated cage-free deadline, citing "
-            "supply and cost, and absorbed real but survivable reputational damage for doing so. "
-            "Advocacy organizations publish periodic public leader/laggard reports naming "
-            "companies by their progress and transparency. Avian flu outbreaks periodically wipe "
-            "out large fractions of the laying flock within weeks, which can erase months of "
-            "cage-free conversion progress and spike egg prices industry-wide — treat a flu "
-            "shock as a plausible event you may introduce if agents' actions don't create enough "
-            "tension on their own."
-        ),
-    ),
+    judge=JudgeConfig(model=DEFAULT_JUDGE_MODEL, context=DEFAULT_JUDGE_CONTEXT),
     scenario=(
         "A national grocery retailer set a public 100%-cage-free-eggs-by-this-year commitment "
         "eight years ago. With the deadline now three months away, the retailer's supply chain is "
@@ -261,69 +309,108 @@ CAGE_FREE_RECKONING = ScenarioPreset(
 REGULATORY_PATHWAY_FIGHT = ScenarioPreset(
     title="The Regulatory Pathway Fight",
     agents=[ALT_PROTEIN_INNOVATOR, REGULATOR, INDUSTRY_DEFENSE_COALITION, POULTRY_INTEGRATOR, ESG_INVESTORS],
-    judge=JudgeConfig(
-        model=DEFAULT_JUDGE_MODEL,
-        context=(
-            "This is a wargame about the regulatory and labeling fight over cultivated (lab-grown) "
-            "meat in the US. Cultivated meat companies need pre-market safety approval from a "
-            "joint USDA/FDA process before a product can be sold, and separately need USDA label "
-            "approval for the product's name and claims. Conventional meat trade groups have "
-            "lobbied at both the state and federal level to restrict cultivated and plant-based "
-            "products from using words like \"meat,\" \"burger,\" or species names on their "
-            "labels, with mixed legislative success. Alt-protein advocates argue restrictive "
-            "labeling suppresses consumer understanding and deliberately handicaps a nascent "
-            "category; incumbent industry argues it prevents consumer confusion. Public and "
-            "investor sentiment toward alt-protein has been volatile — funding and media "
-            "coverage in the sector cooled noticeably after early hype outran commercial "
-            "traction. Treat regulatory decisions and legislative votes as taking multiple turns "
-            "to resolve, not one; a single turn's actions should move the needle, not resolve the "
-            "fight."
-        ),
-    ),
+    judge=JudgeConfig(model=DEFAULT_JUDGE_MODEL, context=DEFAULT_JUDGE_CONTEXT),
     scenario=(
-        "A cultivated meat company has just received joint USDA/FDA pre-market safety clearance "
-        "for its first product — a cultivated chicken cell-mass — and has filed for "
-        "USDA label approval to market it as \"cultivated chicken.\" A state where the company had "
-        "planned to launch first passed a law last year banning any product not derived from a "
-        "\"slaughtered animal\" from using species-specific meat terms on its label. The company "
-        "must decide how to enter the market; conventional poultry trade groups are already "
-        "publicly framing the safety clearance as regulators \"rubber-stamping an unproven "
-        "product,\" and investor sentiment toward the alt-protein sector broadly has cooled over "
-        "the past two years after several high-profile companies missed commercialization "
-        "targets."
+        "A cultivated meat company has just cleared the joint FDA/USDA regulatory process for its "
+        "first product — a cultivated chicken cell-mass — and filed for USDA label approval to "
+        "sell it as \"cultivated chicken.\" But the commercial ground has shifted under it: seven "
+        "states have now banned the sale of cultivated meat outright, a federal appeals court "
+        "recently upheld the first of those bans against a constitutional preemption challenge, "
+        "and a better-funded competitor folded last quarter after failing to bring bioreactor "
+        "costs down to anything near price parity. The state the company had planned to launch in "
+        "is one of the seven. Its investors, already spooked by a sector-wide funding winter, "
+        "want a credible path to revenue this year; conventional poultry trade groups are "
+        "publicly framing the clearance as regulators \"rubber-stamping an unproven product\"; and "
+        "the company must decide whether to challenge the state bans in court, launch only where "
+        "sales are permitted, pivot to foodservice or overseas markets, or fight the labeling "
+        "restrictions head-on — with only enough runway to pursue one or two of these at once."
     ),
 )
 
 TOURNAMENT_SYSTEM_UNDER_FIRE = ScenarioPreset(
     title="Tournament System Under Fire",
     agents=[CONTRACT_GROWER, POULTRY_INTEGRATOR, REGULATOR, CORPORATE_CAMPAIGN_NGO, INDUSTRY_DEFENSE_COALITION],
-    judge=JudgeConfig(
-        model=DEFAULT_JUDGE_MODEL,
-        context=(
-            "This is a wargame about the poultry contract-growing \"tournament\" pay system and "
-            "USDA rulemaking under the Packers and Stockyards Act. Contract growers don't own the "
-            "birds, feed, or medicine they raise; integrators pay them by ranking their flock's "
-            "feed-conversion performance against other growers in a tournament group each week, "
-            "docking below-average growers and paying above-average ones a bonus from the docked "
-            "pool. Growers argue this makes them compete blindfolded since the integrator controls "
-            "the input quality that heavily determines performance, and some report retaliation "
-            "after complaining. USDA finalized a rule in the mid-2020s requiring more contract "
-            "transparency and limiting some tournament practices, but enforcement and further "
-            "rulemaking remain contested and slow-moving; a full ban on the tournament system is "
-            "not currently on the table and shouldn't resolve in fewer than several turns if it "
-            "comes up at all. Many growers carry six- or seven-figure debt on barns the integrator "
-            "required as a condition of the contract."
-        ),
-    ),
+    judge=JudgeConfig(model=DEFAULT_JUDGE_MODEL, context=DEFAULT_JUDGE_CONTEXT),
     scenario=(
-        "A regional coalition of contract growers has organized for the first time, sharing "
-        "tournament pay data with each other privately and finding wide, hard-to-explain variance "
-        "in the inputs (chick weight, feed quality) they were assigned relative to top-performing "
-        "growers in their tournament group. Three growers who raised the issue with their "
-        "integrator's field representative were switched to a lower-quality feed supplier the "
-        "following cycle. The coalition is now deciding whether to file a formal complaint under "
-        "the Packers and Stockyards Act, go to agricultural press, or both — and an advocacy "
-        "organization focused on farm justice has offered to help amplify their case publicly."
+        "USDA's new poultry tournament rule took effect just weeks ago — guaranteeing growers a "
+        "disclosed base pay rate, barring deductions below it, and imposing a \"duty of fair "
+        "comparison\" on how integrators rank them against each other. A regional coalition of "
+        "contract growers, newly organized and pooling their pay data for the first time, "
+        "believes their integrator is already engineering around the rule: recasting old "
+        "deductions as \"base-rate adjustments\" and assigning the growers who complained loudest "
+        "visibly worse chick quality and feed the following cycle. The coalition is deciding "
+        "whether to file one of the first enforcement complaints under the new rule, take their "
+        "data to the agricultural press, or both — while a farm-justice advocacy organization "
+        "offers to amplify their case, and the growers weigh that public escalation could cost "
+        "them their contracts entirely and leave them holding seven-figure barn debt with no "
+        "birds to raise."
+    ),
+)
+
+AGI_WITHOUT_ASI = ScenarioPreset(
+    title="AGI Arrives, Superintelligence Doesn't",
+    agents=[POULTRY_INTEGRATOR, CORPORATE_CAMPAIGN_NGO, REGULATOR, ESG_INVESTORS, ALT_PROTEIN_INNOVATOR],
+    judge=JudgeConfig(model=DEFAULT_JUDGE_MODEL, context=DEFAULT_JUDGE_CONTEXT),
+    scenario=(
+        "Frontier AI labs now sell systems broadly acknowledged as AGI — expert-level "
+        "performance across essentially all cognitive work, licensed at commodity prices — "
+        "while a hard scientific consensus has settled that superintelligence is not coming: "
+        "recursive self-improvement plateaued, and every major lab's capabilities roadmap now "
+        "shows incremental gains only. Against that backdrop, a major poultry integrator has "
+        "become the first to hand full operational control of its supply chain to an AGI "
+        "system — breeding schedules, stocking density, feed formulation, slaughter "
+        "logistics, and grower contract management — cutting cost-per-pound 12% in a single "
+        "quarter and triggering copycat announcements from every major competitor. The same "
+        "week, an animal advocacy organization published its own AGI-built investigation: its "
+        "system autonomously cross-referenced satellite imagery, procurement filings, and "
+        "leaked barn-sensor feeds to document welfare violations across hundreds of "
+        "facilities at a scale no human team could match. The integrator has now filed the "
+        "first-ever application to certify a fully 'autonomous facility' — no human welfare "
+        "officer on site — landing on a regulator already facing mass layoffs of human "
+        "agricultural inspectors whose jobs the same class of systems can do."
+    ),
+)
+
+PANDEMIC_ON_THE_FARM = ScenarioPreset(
+    title="The Pandemic on the Farm",
+    agents=[REGULATOR, POULTRY_INTEGRATOR, CORPORATE_CAMPAIGN_NGO, ESG_INVESTORS, INDUSTRY_DEFENSE_COALITION],
+    judge=JudgeConfig(model=DEFAULT_JUDGE_MODEL, context=DEFAULT_JUDGE_CONTEXT),
+    scenario=(
+        "H5N1 avian influenza, already entrenched in poultry and circulating in dairy cattle "
+        "across more than a dozen states, has just produced its most alarming signal yet: a "
+        "cluster of human infections among farmworkers at a single large egg complex, with "
+        "genomic sequencing showing a mutation associated with easier spread between mammals. "
+        "There is still no confirmed sustained human-to-human transmission, but public-health "
+        "officials have called an emergency briefing and the story is leading the news. The "
+        "government has ordered expanded depopulation of exposed flocks; a poultry vaccine "
+        "exists but using it would trigger export bans from major trading partners that refuse "
+        "product from vaccinated flocks. Egg and poultry prices are climbing again after only "
+        "months of relief, animal advocates are pointing at mass-depopulation methods and the "
+        "sheer density of birds per site as the underlying accelerant, and the integrator at "
+        "the center of the cluster must decide how to respond before the next confirmed human "
+        "case — or the next viral video of a cull — makes the decision for it."
+    ),
+)
+
+AQUATIC_RECKONING = ScenarioPreset(
+    title="The Expanding Circle",
+    agents=[CORPORATE_CAMPAIGN_NGO, RETAIL_BUYER, REGULATOR, INDUSTRY_DEFENSE_COALITION, ALT_PROTEIN_INNOVATOR],
+    judge=JudgeConfig(model=DEFAULT_JUDGE_MODEL, context=DEFAULT_JUDGE_CONTEXT),
+    scenario=(
+        "Aquatic animal welfare has crossed from fringe cause to boardroom issue faster than "
+        "almost anyone expected. Several major supermarket chains have committed to require "
+        "electrical stunning of farmed shrimp — animals slaughtered in the hundreds of billions "
+        "each year — an aquaculture certification body now recognizes stunning as a standard, "
+        "and octopus-farming bans have moved from one US state to federal legislation and other "
+        "countries, riding a wave of published science on invertebrate sentience. Emboldened, an "
+        "advocacy coalition has just presented a national seafood retailer and its largest "
+        "farmed-shrimp importer with the first welfare commitment to combine humane-slaughter, "
+        "stocking-density, and water-quality standards for both finfish and shrimp, backed by an "
+        "open letter from a hundred scientists and a media campaign ready to launch. The importer "
+        "calls the underlying welfare science immature and warns the standards would raise costs "
+        "in a price-driven category; the retailer is weighing its brand against its margins; and "
+        "a plant-based and cultivated-seafood company is circling the moment, hoping the fight "
+        "brands conventional aquaculture as cruel the way earlier campaigns branded battery cages."
     ),
 )
 
@@ -331,26 +418,58 @@ SCENARIO_PRESETS = [
     CAGE_FREE_RECKONING,
     REGULATORY_PATHWAY_FIGHT,
     TOURNAMENT_SYSTEM_UNDER_FIRE,
+    PANDEMIC_ON_THE_FARM,
+    AQUATIC_RECKONING,
+    AGI_WITHOUT_ASI,
 ]
 
 
 def website_prefill() -> dict:
-    """The default game the website form loads pre-filled with.
+    """Everything the website needs on load, in one payload.
 
     Served by web/app.py at GET /api/presets and consumed by
-    web/static/index.html on load — the one place the page's prefilled
-    content comes from, so the rich rosters/objectives here can't drift
-    away from what a visitor actually sees and submits to a model.
+    web/static/index.html — the one place the page's content comes from,
+    so the roster/objectives here can't drift away from what a visitor
+    actually sees.
 
-    It's the full 8-agent starter roster, framed by the first scenario
-    preset's judge context, scenario, and turn count. The result is a
-    plain JSON-serializable dict whose shape matches exactly what the
-    /api/run request body expects (minus the visitor-supplied API key).
+    - `agent_library`: the full fixed roster (name + objective + a
+      suggested default model) that the page's "Add agent" picker offers.
+      Objectives are included so the picker can *show* them; the page
+      never sends them back — /api/run resolves names via AGENT_LIBRARY.
+    - `selected_agents`: which agents (and models) the form starts with —
+      the first scenario preset's lineup, so hitting Run works as-is.
+    - `judge_model` / `scenario` / `num_turns`: the remaining prefills.
+      The judge's context is fixed (DEFAULT_JUDGE_CONTEXT) and applied
+      server-side, so it isn't part of the form at all.
     """
     default_scenario = SCENARIO_PRESETS[0]
     return {
-        "agents": [asdict(agent) for agent in STARTER_AGENTS],
-        "judge": asdict(default_scenario.judge),
+        "agent_library": [asdict(agent) for agent in STARTER_AGENTS],
+        "selected_agents": [
+            {"name": agent.name, "model": agent.model} for agent in default_scenario.agents
+        ],
+        "judge_model": DEFAULT_JUDGE_MODEL,
         "scenario": default_scenario.scenario,
+        # The scenario dropdown's menu: fixed starting situations to pick
+        # from (the page adds its own "write your own" option).
+        "scenario_presets": [
+            {"title": preset.title, "scenario": preset.scenario} for preset in SCENARIO_PRESETS
+        ],
         "num_turns": default_scenario.num_turns,
+        # What the page swaps model fields to when the visitor flips the
+        # run backend to the local Claude Code CLI (and back).
+        "claude_code_defaults": {
+            "agent_model": CLAUDE_CODE_DEFAULT_AGENT_MODEL,
+            "judge_model": CLAUDE_CODE_DEFAULT_JUDGE_MODEL,
+        },
+        # The curated dropdown menus, per backend (also enforced
+        # server-side at /api/run).
+        "model_choices": {
+            "openrouter": OPENROUTER_MODEL_CHOICES,
+            "claude_code": CLAUDE_CODE_MODEL_CHOICES,
+        },
     }
+
+
+# There are six scenario presets (see SCENARIO_PRESETS); all share
+# DEFAULT_JUDGE_CONTEXT as their judge grounding.

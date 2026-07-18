@@ -69,6 +69,7 @@ def test_turn_record_serializes_to_json_directly():
         (lambda d: d.__setitem__("scenario", "   "), "scenario is required"),
         (lambda d: d.__setitem__("num_turns", 0), "num_turns must be at least 1"),
         (lambda d: d.__setitem__("openrouter_api_key", ""), "api key is required"),
+        (lambda d: d.__setitem__("backend", "banana"), "unknown backend"),
     ],
 )
 def test_validate_rejects_bad_input_with_clear_message(mutate, expected_message_fragment):
@@ -83,3 +84,17 @@ def test_validate_rejects_bad_input_with_clear_message(mutate, expected_message_
 def test_validate_accepts_good_input():
     config = GameConfig.from_dict(make_valid_dict())
     config.validate()  # should not raise
+
+
+def test_backend_defaults_to_openrouter():
+    config = GameConfig.from_dict(make_valid_dict())  # dict has no "backend" key
+    assert config.backend == "openrouter"
+
+
+def test_claude_code_backend_needs_no_api_key():
+    # The claude_code backend authenticates via the local Claude Code
+    # CLI's login, so the key requirement only applies to openrouter.
+    data = make_valid_dict()
+    data["backend"] = "claude_code"
+    data["openrouter_api_key"] = ""
+    GameConfig.from_dict(data).validate()  # should not raise

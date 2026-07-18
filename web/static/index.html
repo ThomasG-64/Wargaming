@@ -96,10 +96,104 @@
     padding: 0.1rem 0.5rem;
     border-radius: 999px;
   }
+  .agent-row-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 0.35rem;
+  }
+  .agent-row-header .agent-name { font-weight: 700; }
+
+  /* Read-only objective preview (agents' objectives are fixed - the
+     roster in wargame.presets is the single source of truth). */
+  details.objective-view { margin-top: 0.5rem; }
+  details.objective-view summary {
+    cursor: pointer;
+    color: var(--accent-dark);
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  details.objective-view p {
+    margin: 0.5rem 0 0.25rem;
+    color: var(--muted);
+    font-size: 0.92rem;
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+  }
+
+  .panel-hint { color: var(--muted); font-size: 0.9rem; margin: 0 0 1rem; }
+
+  /* Backend (OpenRouter API vs Claude Code CLI) radio choice */
+  .backend-choice { margin-top: 0.4rem; }
+  .backend-choice label {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-weight: 400;
+    margin-top: 0.35rem;
+    cursor: pointer;
+  }
+  .backend-choice input[type=radio] { accent-color: var(--accent); }
+
+  /* The "Add agent" roster picker */
+  #agent-picker {
+    display: none;
+    border: 1px dashed var(--accent);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-top: 1rem;
+    background: #f6fbfa;
+  }
+  #agent-picker.open { display: block; }
+  #agent-picker h3 { margin: 0 0 0.75rem; font-size: 1rem; }
+  .picker-entry {
+    border: 1px solid var(--border);
+    background: white;
+    border-radius: 8px;
+    padding: 0.7rem 0.85rem;
+    margin-bottom: 0.6rem;
+  }
+  .picker-entry-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+  .picker-entry-header .picker-name { font-weight: 600; }
+  .picker-entry button.add-from-library { margin-top: 0; padding: 0.3rem 0.9rem; font-size: 0.85rem; }
+  #picker-empty { color: var(--muted); font-style: italic; margin: 0; }
+  #custom-agent-form { border-top: 1px dashed var(--accent); margin-top: 1rem; padding-top: 0.75rem; }
+  #custom-agent-form h3 { margin: 0 0 0.25rem; }
+  #custom-agent-form textarea { min-height: 7rem; }
+  .custom-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--accent-dark);
+    background: #e2f1ef;
+    border-radius: 999px;
+    padding: 0.1rem 0.55rem;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+  }
+
+  /* Read-only preview of the selected preset scenario (custom mode swaps
+     in the editable textarea instead). */
+  #scenario-preview {
+    color: var(--muted);
+    font-size: 0.95rem;
+    background: #fafcfd;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.7rem 0.85rem;
+    margin-top: 0.3rem;
+  }
 
   label { display: block; font-weight: 600; margin-top: 0.75rem; font-size: 0.92rem; color: var(--text); }
   label:first-child { margin-top: 0; }
-  input[type=text], input[type=number], input[type=password], textarea {
+  input[type=text], input[type=number], input[type=password], textarea, select {
     width: 100%;
     font: inherit;
     border: 1px solid var(--border);
@@ -108,7 +202,7 @@
     margin-top: 0.3rem;
     background: white;
   }
-  input:focus, textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  input:focus, textarea:focus, select:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
   textarea { min-height: 3.5rem; resize: vertical; }
   /* EDIT HERE: how tall the context/scenario boxes start - big enough
      that the prefilled paragraphs are fully visible without scrolling. */
@@ -129,12 +223,41 @@
   button:disabled { background: #9fb3ad; cursor: not-allowed; }
   button.secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
   button.secondary:hover { background: #ecf5f4; }
-  button.remove-agent { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 0.3rem 0.7rem; font-size: 0.85rem; }
+  button.remove-agent { background: transparent; color: var(--danger); border: 1px solid var(--danger); padding: 0.3rem 0.7rem; font-size: 0.85rem; margin-top: 0; }
   button.remove-agent:hover { background: var(--danger-bg); }
   button[type=submit] { font-size: 1.05rem; padding: 0.75rem 1.5rem; width: 100%; }
 
   #status { margin-top: 1rem; margin-bottom: 1rem; font-weight: 600; text-align: center; }
   #status.error { color: var(--danger); }
+
+  /* Circular progress indicator for a run in flight. The fill circle's
+     stroke-dashoffset is driven from JS as (model calls completed /
+     total model calls). */
+  #progress { display: none; text-align: center; margin: 1rem 0 1.5rem; }
+  #progress.active { display: block; }
+  .progress-ring { width: 130px; height: 130px; }
+  .progress-ring .ring-bg {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 8;
+  }
+  .progress-ring .ring-fill {
+    fill: none;
+    stroke: var(--accent);
+    stroke-width: 8;
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    transition: stroke-dashoffset 0.6s ease;
+  }
+  .progress-ring .ring-percent {
+    font: inherit;
+    font-size: 20px;
+    font-weight: 700;
+    fill: var(--text);
+  }
+  #progress-label { font-weight: 600; margin-top: 0.5rem; }
+  #progress-detail { color: var(--muted); font-size: 0.92rem; margin-top: 0.2rem; }
 
   .run-block { margin-bottom: 2.5rem; }
   .run-block .run-title {
@@ -144,12 +267,83 @@
     font-weight: 700;
     padding: 0.35rem 1rem;
     border-radius: 999px;
-    margin-bottom: 1rem;
+    margin-bottom: 0.4rem;
   }
-  .turn { border-top: 2px solid var(--accent); padding-top: 0.9rem; margin-top: 1.75rem; }
-  .turn h3 { margin-bottom: 0.5rem; }
-  .action { margin: 0.5rem 0; }
+  .run-meta { color: var(--muted); font-size: 0.85rem; margin: 0 0 0.9rem 0.25rem; }
+  /* One finished run: starting situation + judge's summary up front,
+     turn outcomes and the full transcript behind expanders. */
+  .run-panel h3 { margin: 1.25rem 0 0.4rem; font-size: 1.05rem; }
+  .run-panel h3:first-child { margin-top: 0; }
+  .run-panel p { margin: 0.4rem 0; }
+  .run-panel ul { margin: 0.4rem 0 0.4rem 1.25rem; padding: 0; }
+  .run-panel li { margin: 0.3rem 0; }
+  details.run-section {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-top: 1rem;
+    background: #fafcfd;
+  }
+  details.run-section > summary {
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--accent-dark);
+    padding: 0.7rem 0.9rem;
+  }
+  details.run-section[open] > summary { border-bottom: 1px solid var(--border); }
+  details.run-section .run-section-body { padding: 0.3rem 0.9rem 0.9rem; }
+  .run-section-body h4 {
+    margin: 1.1rem 0 0.3rem;
+    font-size: 0.95rem;
+    color: var(--accent-dark);
+    border-top: 1px solid var(--border);
+    padding-top: 0.9rem;
+  }
+  .run-section-body h4:first-child { border-top: none; padding-top: 0.4rem; margin-top: 0.4rem; }
+  .agent-said { font-weight: 700; }
   #results-empty { color: var(--muted); text-align: center; padding: 2rem 0; }
+
+  /* The Implications tab's article layout */
+  .article h2 { margin: 0 0 0.3rem; font-size: 1.45rem; letter-spacing: -0.01em; }
+  .article-byline { color: var(--muted); font-size: 0.9rem; margin: 0 0 1.25rem; }
+  .article h3 {
+    margin: 1.75rem 0 0.5rem;
+    font-size: 1.1rem;
+    color: var(--accent-dark);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0.35rem;
+  }
+  .article p { margin: 0.6rem 0; }
+  .article ul { margin: 0.6rem 0 0.6rem 1.25rem; padding: 0; }
+  .article li { margin: 0.4rem 0; }
+  .notice {
+    background: #fdf6e3;
+    border: 1px solid #e6d9a8;
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    margin: 0 0 1rem;
+  }
+  .scenario-analysis {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fafcfd;
+    padding: 0.9rem 1.1rem;
+    margin: 0.9rem 0;
+  }
+  .scenario-analysis h4 { margin: 0 0 0.35rem; font-size: 1rem; }
+  .scenario-analysis .scenario-blurb { color: var(--muted); margin: 0 0 0.5rem; }
+  .scenario-analysis .pending {
+    color: var(--accent-dark);
+    font-weight: 600;
+    font-style: italic;
+    margin: 0;
+  }
+  .article-footnote {
+    color: var(--muted);
+    font-size: 0.88rem;
+    border-top: 1px solid var(--border);
+    margin-top: 1.5rem;
+    padding-top: 0.9rem;
+  }
 
   footer#about {
     margin-top: 3rem;
@@ -179,40 +373,111 @@
 <div class="tabs">
   <button type="button" class="tab-button active" data-tab="setup">Game Setup</button>
   <button type="button" class="tab-button" data-tab="results">Results</button>
+  <button type="button" class="tab-button" data-tab="implications">Implications</button>
 </div>
 
 <div id="status"></div>
+
+<!-- Progress display for a run in flight: a circular bar that fills as
+     model calls complete, plus what's happening right now and a rough
+     time estimate. Driven by polling GET /api/run/{job_id}. -->
+<div id="progress">
+  <svg class="progress-ring" viewBox="0 0 100 100">
+    <circle class="ring-bg" cx="50" cy="50" r="42" />
+    <circle class="ring-fill" id="ring-fill" cx="50" cy="50" r="42" />
+    <text class="ring-percent" id="ring-percent" x="50" y="57" text-anchor="middle">0%</text>
+  </svg>
+  <div id="progress-label"></div>
+  <div id="progress-detail"></div>
+</div>
 
 <div id="tab-setup" class="tab-content active">
   <form id="game-form">
     <div class="panel">
       <h2 class="panel-title">Agents</h2>
+      <p class="panel-hint">
+        Agents come from a fixed roster of researched stakeholder roles.
+        Pick which ones are in this game and which model plays each of
+        them — expand "View objective" to see what an agent wants.
+      </p>
       <div id="agents"></div>
       <button type="button" id="add-agent" class="secondary">+ Add agent</button>
+      <!-- Populated from GET /api/presets with every roster agent not
+           already in the game. To change the roster or any objective,
+           edit wargame.presets - NOT here. -->
+      <div id="agent-picker">
+        <h3>Choose an agent from the roster</h3>
+        <div id="picker-entries"></div>
+        <!-- Custom agents: name + objective are yours to write; the
+             objective is sent with the run and becomes the agent's
+             system-prompt role, exactly like a roster objective. -->
+        <div id="custom-agent-form">
+          <h3>Or create your own agent</h3>
+          <label>Name</label>
+          <input type="text" id="custom-agent-name" placeholder="e.g. National Veterinary Association" />
+          <label>Objective (what this agent is and wants — becomes its role prompt)</label>
+          <textarea id="custom-agent-objective" placeholder="You represent ... Your objective is ... You support ... You resist ..."></textarea>
+          <button type="button" id="add-custom-agent" class="secondary">Add custom agent</button>
+        </div>
+      </div>
     </div>
 
     <div class="panel">
       <h2 class="panel-title">Judge</h2>
-      <label>Model (OpenRouter slug, e.g. anthropic/claude-sonnet-5)</label>
-      <!-- Prefilled from GET /api/presets on load. To change the default
-           judge model or context, edit wargame.presets (DEFAULT_JUDGE_MODEL
-           and the first scenario preset's JudgeConfig) - NOT here. These
-           fields intentionally ship empty; the fetch fills them in. -->
-      <input type="text" id="judge-model" />
-      <label>Context (background info to ground the judge's rulings)</label>
-      <textarea id="judge-context" class="textarea-large"></textarea>
+      <label>Model</label>
+      <!-- Options come from GET /api/presets (wargame.presets'
+           OPENROUTER_MODEL_CHOICES / CLAUDE_CODE_MODEL_CHOICES,
+           depending on the selected run backend). To change the menu or
+           the default judge model, edit wargame.presets - NOT here. The
+           judge's grounding context is fixed server-side
+           (wargame.presets.DEFAULT_JUDGE_CONTEXT), so there's no context
+           field to fill in. -->
+      <select id="judge-model"></select>
+      <p class="panel-hint" style="margin-top: 0.75rem; margin-bottom: 0;">
+        The judge's background context is built in — it already knows this
+        domain and how these stakeholders realistically behave. After the
+        last turn, the judge also writes the run's after-action summary.
+      </p>
     </div>
 
     <div class="panel">
       <h2 class="panel-title">Game</h2>
       <label>Starting scenario</label>
-      <!-- Prefilled from GET /api/presets on load (the first scenario
-           preset in wargame.presets). Edit it there, not here. -->
-      <textarea id="scenario" class="textarea-large"></textarea>
+      <!-- Options come from GET /api/presets (wargame.presets'
+           SCENARIO_PRESETS — edit/add scenarios there, not here), plus a
+           "write your own" option this page adds. Picking a preset shows
+           its text read-only below; picking custom swaps in a textarea. -->
+      <select id="scenario-select"></select>
+      <div id="scenario-preview"></div>
+      <textarea id="scenario-custom" class="textarea-large" style="display: none;"
+        placeholder="Describe the starting situation: who has just done what, what tensions are live, and what's about to come to a head. The agents see this as turn 1's situation."></textarea>
       <label>Number of turns</label>
       <input type="number" id="num-turns" min="1" />
-      <label>OpenRouter API key</label>
-      <input type="password" id="api-key" placeholder="sk-or-..." />
+
+      <label>Run models via</label>
+      <div class="backend-choice">
+        <label>
+          <input type="radio" name="backend" value="openrouter" checked />
+          OpenRouter API — bring your own key; any model on openrouter.ai
+        </label>
+        <label>
+          <input type="radio" name="backend" value="claude_code" />
+          Claude Code CLI — no API key; uses this machine's Claude login (Claude models only)
+        </label>
+      </div>
+
+      <div id="openrouter-key-field">
+        <label>OpenRouter API key</label>
+        <input type="password" id="api-key" placeholder="sk-or-..." />
+      </div>
+      <p id="claude-code-hint" class="panel-hint" style="display: none; margin-top: 0.75rem; margin-bottom: 0;">
+        Runs go through the Claude Code CLI installed on the machine running
+        this server and are billed to whatever Claude account it's logged
+        into. Model fields switch to Anthropic model names (e.g.
+        <code>claude-haiku-4-5</code>, <code>claude-sonnet-5</code>, or
+        aliases like <code>haiku</code>/<code>sonnet</code>/<code>opus</code>).
+        Expect runs to be noticeably slower than the API.
+      </p>
     </div>
 
     <button type="submit">Run game</button>
@@ -225,22 +490,204 @@
   </div>
 </div>
 
+<!-- EDIT HERE: the Implications article. Everything below is placeholder
+     structure — once enough runs have been done and analyzed, replace
+     the "Analysis pending" notices (and this intro, if you like) with
+     the actual findings. The per-scenario sections mirror the scenario
+     presets in wargame.presets so there's an obvious slot for each. -->
+<div id="tab-implications" class="tab-content">
+  <article class="article panel">
+    <h2>What Wargaming Suggests About the Future of Animal Welfare</h2>
+    <p class="article-byline">A living analysis built from simulation runs on this site &middot; last updated July 2026</p>
+
+    <div class="notice">
+      <strong>Analysis pending.</strong> This page is the placeholder for a
+      cross-run analysis that hasn't been written yet. Runs are being
+      collected now; once there are enough of them, the sections below
+      will be filled in with what actually happened across them —
+      patterns, turning points, and what they suggest about how animal
+      welfare fares under different futures.
+    </div>
+
+    <h3>What this project is</h3>
+    <p>
+      WargamingLLM is a multi-agent simulation of the fights that will
+      decide how farmed animals are treated. Each run casts language
+      models as real stakeholder types — vertically integrated producers,
+      contract growers, corporate campaigners, alternative-protein
+      companies, regulators, ESG investors, retail buyers, and industry
+      defense coalitions — each with a researched objective describing
+      what that actor actually wants and how it actually behaves. A
+      neutral judge model resolves their moves turn by turn into
+      realistic outcomes, then writes an after-action report on where
+      things ended up.
+    </p>
+    <p>
+      No single run predicts anything. The point is repetition: run the
+      same scenario many times, vary the models and lineups, and look for
+      the patterns that keep showing up — which levers reliably move
+      welfare outcomes, which commitments reliably collapse, which
+      coalitions form again and again. That aggregate picture is what
+      this page will present.
+    </p>
+
+    <h3>The scenarios under study</h3>
+    <p>
+      Six starting situations are being explored, each built from real
+      dynamics in animal agriculture. Findings for each will appear here.
+    </p>
+
+    <section class="scenario-analysis">
+      <h4>Cage-Free Reckoning</h4>
+      <p class="scenario-blurb">A retailer three months from a public 100% cage-free
+      deadline it won't hit, an advocacy scorecard about to call it a
+      laggard, and an avian-flu supply shock hitting everyone at once.
+      What happens to corporate welfare pledges under pressure?</p>
+      <p class="pending">Analysis pending — runs in progress.</p>
+    </section>
+
+    <section class="scenario-analysis">
+      <h4>The Regulatory Pathway Fight</h4>
+      <p class="scenario-blurb">Cultivated meat clears federal safety review just as a
+      state bans it from using the word "chicken." Can a nascent
+      alternative to animal agriculture survive its labeling war?</p>
+      <p class="pending">Analysis pending — runs in progress.</p>
+    </section>
+
+    <section class="scenario-analysis">
+      <h4>Tournament System Under Fire</h4>
+      <p class="scenario-blurb">Contract growers organize against the ranking-based pay
+      system that keeps them indebted and silent — with welfare advocates
+      offering to amplify their case. Do farmer justice and animal
+      welfare interests actually align?</p>
+      <p class="pending">Analysis pending — runs in progress.</p>
+    </section>
+
+    <section class="scenario-analysis">
+      <h4>The Pandemic on the Farm</h4>
+      <p class="scenario-blurb">H5N1 jumps closer to humans from inside a large egg
+      complex — mass culls, a vaccine trade dilemma, and advocates
+      arguing that confinement density itself is the accelerant. Does a
+      zoonotic scare reform the system or entrench it?</p>
+      <p class="pending">Analysis pending — runs in progress.</p>
+    </section>
+
+    <section class="scenario-analysis">
+      <h4>The Expanding Circle</h4>
+      <p class="scenario-blurb">Invertebrate sentience science goes mainstream: shrimp
+      stunning commitments, octopus-farming bans, and the first combined
+      welfare standard for finfish and shrimp land on a seafood retailer
+      at once. How far does the moral circle actually stretch when
+      margins are thin?</p>
+      <p class="pending">Analysis pending — runs in progress.</p>
+    </section>
+
+    <section class="scenario-analysis">
+      <h4>AGI Arrives, Superintelligence Doesn't</h4>
+      <p class="scenario-blurb">Expert-level AI becomes a commodity every actor can
+      afford — industry automates whole supply chains, advocates run
+      investigations no human team could match, regulators face
+      inspecting facilities with no humans in them. Who wins when
+      everyone gets the same cheap cognition?</p>
+      <p class="pending">Analysis pending — runs in progress.</p>
+    </section>
+
+    <h3>What to look for when the analysis lands</h3>
+    <ul>
+      <li>Which mechanisms actually moved welfare outcomes across runs — public scorecards, supplier contracts, shareholder pressure, regulation, market alternatives — and which just made noise.</li>
+      <li>The failure modes: where welfare commitments collapsed, and what conditions made collapse cheap for the actor abandoning them.</li>
+      <li>Recurring alliances and betrayals — especially the unstable ones, like growers and welfare advocates, or investors and campaigners.</li>
+      <li>How outside shocks (disease outbreaks, investigations, technology shifts) redistributed leverage between actors.</li>
+      <li>Whether different models playing the same role behave differently — and what that says about using LLMs for this kind of foresight at all.</li>
+    </ul>
+
+    <p class="article-footnote">
+      Methodology note: every claim on this page will be traceable to
+      specific runs viewable in the Results tab. Simulations are
+      exploratory foresight, not prediction — they map the space of
+      plausible dynamics, not the future.
+    </p>
+  </article>
+</div>
+
+<!-- One agent already added to the game: fixed name + read-only
+     objective from the roster; only the model is editable. -->
 <template id="agent-row-template">
   <div class="agent-row">
     <span class="agent-index"></span>
-    <label>Name</label>
-    <input type="text" class="agent-name" placeholder="e.g. Poultry Integrator" />
-    <label>Objective</label>
-    <textarea class="agent-objective" placeholder="What does this agent want?"></textarea>
-    <label>Model (OpenRouter slug)</label>
-    <input type="text" class="agent-model" placeholder="e.g. openai/gpt-5-nano" />
-    <button type="button" class="remove-agent">Remove</button>
+    <div class="agent-row-header">
+      <span class="agent-name"></span>
+      <button type="button" class="remove-agent">Remove</button>
+    </div>
+    <details class="objective-view">
+      <summary>View objective</summary>
+      <p class="agent-objective"></p>
+    </details>
+    <label>Model</label>
+    <select class="agent-model"></select>
+  </div>
+</template>
+
+<!-- One roster agent shown in the "Add agent" picker. -->
+<template id="picker-entry-template">
+  <div class="picker-entry">
+    <div class="picker-entry-header">
+      <span class="picker-name"></span>
+      <button type="button" class="add-from-library">Add</button>
+    </div>
+    <details class="objective-view">
+      <summary>View objective</summary>
+      <p class="picker-objective"></p>
+    </details>
   </div>
 </template>
 
 <script>
 const agentsContainer = document.getElementById("agents");
 const agentRowTemplate = document.getElementById("agent-row-template");
+const pickerEl = document.getElementById("agent-picker");
+const pickerEntries = document.getElementById("picker-entries");
+const pickerEntryTemplate = document.getElementById("picker-entry-template");
+
+// The fixed roster, loaded from GET /api/presets (which serves it
+// straight from wargame.presets.AGENT_LIBRARY). Each entry has a name,
+// an objective (shown read-only in the picker and in added rows), and a
+// suggested default model.
+let agentLibrary = [];
+
+// Backend-dependent model defaults and the curated dropdown menus, also
+// from /api/presets. OpenRouter uses per-agent slugs from the library;
+// Claude Code uses one Anthropic model for all agents and a step-up
+// model for the judge. Each menu entry is {label, value}.
+let claudeCodeDefaults = { agent_model: "claude-haiku-4-5", judge_model: "claude-sonnet-5" };
+let openrouterJudgeDefault = "";
+let modelChoices = { openrouter: [], claude_code: [] };
+
+function currentBackend() {
+  return document.querySelector('input[name="backend"]:checked').value;
+}
+
+// The library's per-agent model is an OpenRouter slug; on the Claude
+// Code backend every agent starts from the same Anthropic model instead.
+function defaultModelFor(libraryAgent) {
+  return currentBackend() === "claude_code" ? claudeCodeDefaults.agent_model : libraryAgent.model;
+}
+
+// Rebuild a model <select>'s options for the active backend and select
+// `value` (falling back to the first option if it isn't in the menu —
+// which happens to every agent row when the backend switches, since the
+// two backends name models incompatibly).
+function fillModelSelect(select, value) {
+  const choices = modelChoices[currentBackend()] || [];
+  select.innerHTML = "";
+  for (const choice of choices) {
+    const option = document.createElement("option");
+    option.value = choice.value;
+    option.textContent = choice.label;
+    select.appendChild(option);
+  }
+  if (choices.some((choice) => choice.value === value)) select.value = value;
+}
 
 // --- Tabs ---
 function switchTab(name) {
@@ -249,89 +696,368 @@ function switchTab(name) {
 }
 document.querySelectorAll(".tab-button").forEach((b) => b.addEventListener("click", () => switchTab(b.dataset.tab)));
 
-// --- Agent rows ---
+// --- Agent rows (agents already added to the game) ---
 function renumberAgents() {
   [...agentsContainer.querySelectorAll(".agent-row")].forEach((row, i) => {
     row.querySelector(".agent-index").textContent = `Agent ${i + 1}`;
   });
 }
 
-function addAgentRow(preset) {
-  const row = agentRowTemplate.content.cloneNode(true);
-  if (preset) {
-    row.querySelector(".agent-name").value = preset.name;
-    row.querySelector(".agent-objective").value = preset.objective;
-    row.querySelector(".agent-model").value = preset.model;
-  }
-  row.querySelector(".remove-agent").addEventListener("click", (e) => {
-    e.target.closest(".agent-row").remove();
-    renumberAgents();
-  });
-  agentsContainer.appendChild(row);
-  renumberAgents();
+function addedAgentNames() {
+  return new Set([...agentsContainer.querySelectorAll(".agent-row")].map((row) => row.dataset.agentName));
 }
 
-document.getElementById("add-agent").addEventListener("click", () => addAgentRow());
+// Add an agent to the game. For roster agents, name and objective are
+// fixed roster data (the objective is display-only and never submitted -
+// the backend resolves it from the name). For custom agents (isCustom),
+// the visitor wrote both, and the objective IS submitted with the run.
+function addAgentRow(libraryAgent, model, isCustom) {
+  const fragment = agentRowTemplate.content.cloneNode(true);
+  const row = fragment.querySelector(".agent-row");
+  row.dataset.agentName = libraryAgent.name;
+  if (isCustom) {
+    row.dataset.custom = "1";
+    row.querySelector(".agent-name").insertAdjacentHTML("afterend", '<span class="custom-tag">custom</span>');
+  }
+  row.querySelector(".agent-name").textContent = libraryAgent.name;
+  row.querySelector(".agent-objective").textContent = libraryAgent.objective;
+  fillModelSelect(row.querySelector(".agent-model"), model || defaultModelFor(libraryAgent));
+  row.querySelector(".remove-agent").addEventListener("click", () => {
+    row.remove();
+    renumberAgents();
+    refreshPicker();
+  });
+  agentsContainer.appendChild(fragment);
+  renumberAgents();
+  refreshPicker();
+}
 
-// Load the page pre-filled from the backend's presets (GET /api/presets),
-// which is served straight from wargame.presets - the single source of
-// truth for both this form's defaults and the Python presets. Nothing here
-// is hardcoded, so the two can't drift apart.
+// --- Roster picker ---
+// Rebuilt every time an agent is added/removed so it only ever offers
+// roster agents that aren't already in the game.
+function refreshPicker() {
+  pickerEntries.innerHTML = "";
+  const added = addedAgentNames();
+  const available = agentLibrary.filter((agent) => !added.has(agent.name));
+  if (available.length === 0) {
+    pickerEntries.innerHTML = '<p id="picker-empty">Every roster agent is already in the game.</p>';
+    return;
+  }
+  for (const agent of available) {
+    const entry = pickerEntryTemplate.content.cloneNode(true);
+    entry.querySelector(".picker-name").textContent = agent.name;
+    entry.querySelector(".picker-objective").textContent = agent.objective;
+    entry.querySelector(".add-from-library").addEventListener("click", () => addAgentRow(agent));
+    pickerEntries.appendChild(entry);
+  }
+}
+
+document.getElementById("add-agent").addEventListener("click", () => {
+  refreshPicker();
+  pickerEl.classList.toggle("open");
+});
+
+// --- Custom agents (name + objective written by the visitor) ---
+document.getElementById("add-custom-agent").addEventListener("click", () => {
+  const statusEl = document.getElementById("status");
+  const nameInput = document.getElementById("custom-agent-name");
+  const objectiveInput = document.getElementById("custom-agent-objective");
+  const name = nameInput.value.trim();
+  const objective = objectiveInput.value.trim();
+
+  statusEl.className = "error";
+  if (!name) { statusEl.textContent = "Give your custom agent a name first."; return; }
+  if (!objective) { statusEl.textContent = "Give your custom agent an objective first."; return; }
+  const taken = [...addedAgentNames()].some((n) => n.toLowerCase() === name.toLowerCase())
+    || agentLibrary.some((a) => a.name.toLowerCase() === name.toLowerCase());
+  if (taken) { statusEl.textContent = `The name "${name}" is already used by an agent in the game or the roster — pick another.`; return; }
+
+  statusEl.className = "";
+  statusEl.textContent = "";
+  addAgentRow({ name, objective }, null, true);
+  nameInput.value = "";
+  objectiveInput.value = "";
+});
+
+// --- Scenario picker (preset dropdown + write-your-own) ---
+const CUSTOM_SCENARIO_VALUE = "__custom__";
+let scenarioPresets = []; // [{title, scenario}] from /api/presets
+
+function applyScenarioChoice() {
+  const value = document.getElementById("scenario-select").value;
+  const isCustom = value === CUSTOM_SCENARIO_VALUE;
+  document.getElementById("scenario-custom").style.display = isCustom ? "" : "none";
+  const preview = document.getElementById("scenario-preview");
+  preview.style.display = isCustom ? "none" : "";
+  if (!isCustom && scenarioPresets[value]) {
+    preview.textContent = scenarioPresets[value].scenario;
+  }
+}
+
+function currentScenarioText() {
+  const value = document.getElementById("scenario-select").value;
+  if (value === CUSTOM_SCENARIO_VALUE) return document.getElementById("scenario-custom").value;
+  return scenarioPresets[value] ? scenarioPresets[value].scenario : "";
+}
+
+document.getElementById("scenario-select").addEventListener("change", applyScenarioChoice);
+
+// Load the page from the backend's presets (GET /api/presets), which is
+// served straight from wargame.presets - the single source of truth for
+// the agent roster, the default lineup, and the form's other defaults.
+// Nothing here is hardcoded, so the page and the Python presets can't
+// drift apart.
 async function loadPresets() {
   const statusEl = document.getElementById("status");
   try {
     const response = await fetch("/api/presets");
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const preset = await response.json();
-    preset.agents.forEach(addAgentRow);
-    document.getElementById("judge-model").value = preset.judge.model;
-    document.getElementById("judge-context").value = preset.judge.context;
-    document.getElementById("scenario").value = preset.scenario;
+    agentLibrary = preset.agent_library;
+    if (preset.claude_code_defaults) claudeCodeDefaults = preset.claude_code_defaults;
+    if (preset.model_choices) modelChoices = preset.model_choices;
+    openrouterJudgeDefault = preset.judge_model;
+    for (const selected of preset.selected_agents) {
+      const libraryAgent = agentLibrary.find((agent) => agent.name === selected.name);
+      if (libraryAgent) addAgentRow(libraryAgent, selected.model);
+    }
+    fillModelSelect(document.getElementById("judge-model"), preset.judge_model);
+    scenarioPresets = preset.scenario_presets || [];
+    const scenarioSelect = document.getElementById("scenario-select");
+    scenarioSelect.innerHTML = "";
+    scenarioPresets.forEach((sp, i) => {
+      const option = document.createElement("option");
+      option.value = String(i);
+      option.textContent = sp.title;
+      scenarioSelect.appendChild(option);
+    });
+    const customOption = document.createElement("option");
+    customOption.value = CUSTOM_SCENARIO_VALUE;
+    customOption.textContent = "Custom — write your own scenario";
+    scenarioSelect.appendChild(customOption);
+    applyScenarioChoice();
     document.getElementById("num-turns").value = preset.num_turns;
+    refreshPicker();
   } catch (err) {
-    // Leave the form blank but usable, and say why it's empty rather than
-    // failing silently. (The file:// case is handled separately below.)
+    // Without the roster from the backend there's nothing to pick agents
+    // from, so say why instead of failing silently. (The file:// case is
+    // handled separately below.)
     if (window.location.protocol !== "file:") {
       statusEl.className = "error";
-      statusEl.textContent = "Couldn't load the example presets: " + err.message + ". You can still fill the form in manually.";
+      statusEl.textContent = "Couldn't load the agent roster: " + err.message + ". Is the server running?";
     }
-    addAgentRow();
   }
 }
 loadPresets();
 
 function collectAgents() {
-  return [...agentsContainer.querySelectorAll(".agent-row")].map((row) => ({
-    name: row.querySelector(".agent-name").value,
-    objective: row.querySelector(".agent-objective").value,
-    model: row.querySelector(".agent-model").value,
-  }));
+  return [...agentsContainer.querySelectorAll(".agent-row")].map((row) => {
+    const agent = {
+      name: row.dataset.agentName,
+      model: row.querySelector(".agent-model").value,
+    };
+    // Custom agents carry their visitor-written objective; roster agents
+    // send none (the server resolves theirs from the library by name).
+    if (row.dataset.custom) {
+      agent.objective = row.querySelector(".agent-objective").textContent;
+    }
+    return agent;
+  });
 }
+
+// --- Backend switch (OpenRouter API vs the local Claude Code CLI) ---
+// The two backends name models in incompatible ways (OpenRouter slugs
+// like "openai/gpt-5-nano" vs Anthropic ids like "claude-haiku-4-5"),
+// so switching rebuilds every model dropdown with the new backend's menu
+// and resets it to that backend's default — model picks don't survive a
+// switch.
+function applyBackend() {
+  const isClaudeCode = currentBackend() === "claude_code";
+  document.getElementById("openrouter-key-field").style.display = isClaudeCode ? "none" : "";
+  document.getElementById("claude-code-hint").style.display = isClaudeCode ? "" : "none";
+
+  for (const row of agentsContainer.querySelectorAll(".agent-row")) {
+    const libraryAgent = agentLibrary.find((agent) => agent.name === row.dataset.agentName);
+    fillModelSelect(
+      row.querySelector(".agent-model"),
+      isClaudeCode ? claudeCodeDefaults.agent_model : (libraryAgent ? libraryAgent.model : "")
+    );
+  }
+  fillModelSelect(
+    document.getElementById("judge-model"),
+    isClaudeCode ? claudeCodeDefaults.judge_model : openrouterJudgeDefault
+  );
+}
+
+document.querySelectorAll('input[name="backend"]').forEach((radio) =>
+  radio.addEventListener("change", applyBackend)
+);
 
 // --- Results (accumulate every run instead of overwriting the last one) ---
 let runCount = 0;
 
-function renderRun(turns) {
+function escapeHtml(text) {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// Model output is untrusted text with light markdown habits. Escape it,
+// then support just the bits models reliably emit and the judge's
+// summary prompt asks for: **bold**, "- " bullet lines, and paragraph
+// breaks. Anything fancier stays visible as plain text.
+function formatModelText(text) {
+  const bolded = escapeHtml((text || "").trim()).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  let html = "";
+  let inList = false;
+  for (const line of bolded.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("- ")) {
+      if (!inList) { html += "<ul>"; inList = true; }
+      html += `<li>${trimmed.slice(2)}</li>`;
+    } else {
+      if (inList) { html += "</ul>"; inList = false; }
+      if (trimmed) html += `<p>${trimmed}</p>`;
+    }
+  }
+  if (inList) html += "</ul>";
+  return html;
+}
+
+// One run: starting situation and the judge's after-action summary shown
+// up front; the per-turn outcomes and the full everything-said transcript
+// tucked behind expanders for when you want to dig in.
+// `record` is a persisted run record from the server ({finished_at,
+// backend, result: {turns, final_summary}, ...}) — the same shape whether
+// it just finished or is being reloaded from disk on page load.
+function renderRun(record) {
   runCount += 1;
+  const result = record.result;
+  const turns = result.turns;
   const resultsEl = document.getElementById("results");
   const emptyMessage = document.getElementById("results-empty");
   if (emptyMessage) emptyMessage.remove();
 
+  const outcomes = turns
+    .map((turn) => `<h4>Turn ${turn.turn_number}</h4>${formatModelText(turn.summary)}`)
+    .join("");
+
+  const transcript = turns
+    .map((turn) => {
+      let block = `<h4>Turn ${turn.turn_number}</h4>`;
+      block += `<p><span class="agent-said">Situation:</span></p>${formatModelText(turn.situation)}`;
+      for (const [name, action] of Object.entries(turn.actions)) {
+        block += `<p><span class="agent-said">${escapeHtml(name)}:</span></p>${formatModelText(action)}`;
+      }
+      block += `<p><span class="agent-said">Outcome:</span></p>${formatModelText(turn.summary)}`;
+      return block;
+    })
+    .join("");
+
   const runEl = document.createElement("div");
   runEl.className = "run-block";
-  const timestamp = new Date().toLocaleString();
-  let html = `<div class="run-title">Run ${runCount} &middot; ${timestamp}</div>`;
-  for (const turn of turns) {
-    html += `<div class="turn panel"><h3>Turn ${turn.turn_number}</h3><p><strong>Situation:</strong> ${turn.situation}</p>`;
-    for (const [name, action] of Object.entries(turn.actions)) {
-      html += `<p class="action"><strong>${name}:</strong> ${action}</p>`;
-    }
-    html += `<p><strong>Outcome:</strong> ${turn.summary}</p></div>`;
-  }
-  runEl.innerHTML = html;
+  const timestamp = record.finished_at
+    ? new Date(record.finished_at * 1000).toLocaleString()
+    : new Date().toLocaleString();
+  const backendLabel = record.backend === "claude_code" ? "Claude Code CLI" : "OpenRouter";
+  // Older records predate scenario_title; leave the chip off for those.
+  const scenarioChip = record.scenario_title ? ` &middot; ${escapeHtml(record.scenario_title)}` : "";
+  const lineup = (record.agents || [])
+    .map((agent) => `${escapeHtml(agent.name)} (${escapeHtml(agent.model)})`)
+    .join(", ");
+  const meta = lineup
+    ? `<p class="run-meta">${record.num_turns} turn${record.num_turns === 1 ? "" : "s"} &middot; ${lineup} &middot; judge: ${escapeHtml(record.judge_model || "?")}</p>`
+    : "";
+  runEl.innerHTML =
+    `<div class="run-title">Run ${runCount}${scenarioChip} &middot; ${timestamp} &middot; ${backendLabel}</div>` +
+    meta +
+    `<div class="panel run-panel">` +
+    `<h3>Starting situation</h3>${formatModelText(turns.length ? turns[0].situation : "")}` +
+    `<h3>What happened</h3>${formatModelText(result.final_summary || "(no summary was produced)")}` +
+    `<details class="run-section"><summary>Turn-by-turn outcomes</summary>` +
+    `<div class="run-section-body">${outcomes}</div></details>` +
+    `<details class="run-section"><summary>Full transcript — everything each agent said and did</summary>` +
+    `<div class="run-section-body">${transcript}</div></details>` +
+    `</div>`;
   // Newest run first, so you never have to scroll past old runs to see
   // the one you just triggered.
   resultsEl.insertBefore(runEl, resultsEl.firstChild);
+}
+
+// --- Past runs (persisted server-side in output/runs.jsonl) ---
+// Every run ever completed on this machine shows up in the Results tab,
+// not just this browser session's. Served oldest-first; renderRun
+// inserts newest-first, so numbering matches chronology.
+async function loadRuns() {
+  try {
+    const response = await fetch("/api/runs");
+    if (!response.ok) return;
+    const runs = await response.json();
+    runs.forEach(renderRun);
+  } catch (err) {
+    // No stored runs is fine; a fetch failure just leaves the tab empty.
+  }
+}
+loadRuns();
+
+// --- Run progress (circular bar driven by polling the job endpoint) ---
+const RING_CIRCUMFERENCE = 2 * Math.PI * 42; // matches the SVG circle's r
+
+function showProgress(fraction, label, detail) {
+  const progressEl = document.getElementById("progress");
+  progressEl.classList.add("active");
+  const ring = document.getElementById("ring-fill");
+  ring.style.strokeDasharray = RING_CIRCUMFERENCE;
+  ring.style.strokeDashoffset = RING_CIRCUMFERENCE * (1 - fraction);
+  document.getElementById("ring-percent").textContent = `${Math.round(fraction * 100)}%`;
+  document.getElementById("progress-label").textContent = label;
+  document.getElementById("progress-detail").textContent = detail;
+}
+
+function hideProgress() {
+  document.getElementById("progress").classList.remove("active");
+}
+
+function formatDuration(seconds) {
+  const s = Math.max(0, Math.round(seconds));
+  if (s < 60) return `${s}s`;
+  return `${Math.floor(s / 60)}m ${s % 60}s`;
+}
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// Poll the job until it finishes, updating the ring as model calls
+// complete. Returns the finished run record; throws on job failure.
+async function pollJob(jobId) {
+  let failures = 0;
+  while (true) {
+    await sleep(2000);
+    let status;
+    try {
+      const response = await fetch(`/api/run/${jobId}`);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      status = await response.json();
+      failures = 0;
+    } catch (err) {
+      // A couple of hiccups are survivable (the run keeps going
+      // server-side); a persistent failure means the server is gone.
+      failures += 1;
+      if (failures >= 5) throw new Error("Lost contact with the server. If it's still running, the finished run will appear in Results after a reload.");
+      continue;
+    }
+
+    if (status.status === "error") throw new Error(status.error);
+    if (status.status === "done") return status.run;
+
+    // ETA from average time per completed call; needs at least one
+    // completed call to be meaningful.
+    const detail = status.completed > 0
+      ? `${status.completed} of ${status.total} model calls done · ≈${formatDuration((status.elapsed_s / status.completed) * (status.total - status.completed))} remaining`
+      : `0 of ${status.total} model calls done · estimating time remaining...`;
+    showProgress(status.completed / status.total, status.label, detail);
+  }
 }
 
 document.getElementById("game-form").addEventListener("submit", async (e) => {
@@ -339,19 +1065,22 @@ document.getElementById("game-form").addEventListener("submit", async (e) => {
   const statusEl = document.getElementById("status");
   const submitButton = e.target.querySelector("button[type=submit]");
 
+  // Agents are submitted as name + model only; the backend resolves each
+  // name to its fixed roster objective, and the judge's context is fixed
+  // server-side too. On the claude_code backend the key field is hidden
+  // and its (possibly stale) value is irrelevant — send it blank.
+  const backend = currentBackend();
   const body = {
     agents: collectAgents(),
-    judge: {
-      model: document.getElementById("judge-model").value,
-      context: document.getElementById("judge-context").value,
-    },
-    scenario: document.getElementById("scenario").value,
+    judge_model: document.getElementById("judge-model").value,
+    scenario: currentScenarioText(),
     num_turns: parseInt(document.getElementById("num-turns").value, 10),
-    openrouter_api_key: document.getElementById("api-key").value,
+    backend: backend,
+    openrouter_api_key: backend === "claude_code" ? "" : document.getElementById("api-key").value,
   };
 
   statusEl.className = "";
-  statusEl.textContent = "Running... this can take a while for more agents/turns.";
+  statusEl.textContent = "";
   submitButton.disabled = true;
 
   try {
@@ -361,18 +1090,24 @@ document.getElementById("game-form").addEventListener("submit", async (e) => {
       body: JSON.stringify(body),
     });
     const data = await response.json();
-
     if (!response.ok) {
       throw new Error(data.detail || "Something went wrong.");
     }
 
+    showProgress(0, "Starting the run...",
+      backend === "claude_code"
+        ? `${data.total} model calls to make — the CLI backend is slow, expect ~20-30s per call.`
+        : `${data.total} model calls to make.`);
+
+    const run = await pollJob(data.job_id);
     statusEl.textContent = "Done. Results pushed to the Results tab.";
-    renderRun(data);
+    renderRun(run);
     switchTab("results");
   } catch (err) {
     statusEl.className = "error";
     statusEl.textContent = "Error: " + err.message;
   } finally {
+    hideProgress();
     submitButton.disabled = false;
   }
 });
@@ -391,19 +1126,23 @@ if (window.location.protocol === "file:") {
 <footer id="about">
   <h2>About this project</h2>
   <p>
-    WargamingLLM is a configurable multi-agent policy wargame: define any
-    number of stakeholder agents (a name, an objective, and which model
-    plays them), a neutral judge (a model plus background context to
-    ground its rulings), a starting scenario, and a turn count. Each
-    turn, every agent privately decides what it does given the current
-    situation; the judge then resolves all of those actions into a
-    realistic outcome, which becomes the next turn's starting situation.
-    The result is a turn-by-turn transcript of how different interests
-    might actually behave and collide under a given scenario.
+    WargamingLLM is a configurable multi-agent policy wargame: pick
+    stakeholder agents from a fixed roster of researched roles (each with
+    a detailed objective you can view), choose which model plays each of
+    them, choose a model for the neutral judge (whose grounding context
+    is built in), and write your own starting scenario and turn count.
+    Each turn, every agent privately decides what it does given the
+    current situation; the judge then resolves all of those actions into
+    a realistic outcome, which becomes the next turn's starting
+    situation. The result is a turn-by-turn transcript of how different
+    interests might actually behave and collide under a given scenario.
   </p>
   <p>
-    All model calls run through OpenRouter, so a single API key can
-    drive any mix of models across agents and the judge.
+    Model calls run through OpenRouter (a single API key drives any mix
+    of models across agents and the judge), or — when running this site
+    locally — through the Claude Code CLI on the host machine, with no
+    API key at all: calls are billed to the Claude account the CLI is
+    logged into.
   </p>
   <p>
     Inspired in part by the animal-welfare-and-AI research space,

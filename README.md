@@ -1,18 +1,42 @@
 # AI-Assisted Wargaming for Animal Welfare
 
-A configurable multi-agent policy wargame backend. You define any number
-of stakeholder agents (a name, an objective, and which model plays them),
-a judge (a model plus background context to ground its rulings), a
-starting scenario, and a turn count — the engine runs the simulation and
-returns a judge-adjudicated turn-by-turn transcript. Every model call
-goes through [OpenRouter](https://openrouter.ai/), so one API key covers
-any model any agent picks.
+A configurable multi-agent policy wargame. On the website you pick
+stakeholder agents from a fixed roster of researched roles (each with a
+detailed objective you can view but not edit) — or create your own
+custom agents with a name and objective you write yourself — choose
+which model plays each of them from a curated dropdown, choose a model
+for the neutral judge (whose grounding context is built in), pick a
+starting scenario from a preset menu (or write your own), and set a
+turn count — the engine runs the simulation and returns a
+judge-adjudicated turn-by-turn transcript plus the judge's after-action
+summary. Model calls run through one of two backends
+(pick on the page under "Run models via"):
 
-This is being built as a backend-first project: the goal is a website
-where all of the above (agents, judge, scenario, turns, your OpenRouter
-key) are just form fields. See `src/wargame/config.py`'s `GameConfig` —
-that's the exact object a web request will build and hand to
-`engine.run_game()`.
+- **OpenRouter API** (default) — one [OpenRouter](https://openrouter.ai/)
+  key covers any model any agent picks.
+- **Claude Code CLI** — no API key at all. Calls run through the Claude
+  Code CLI installed on this machine via the Claude Agent SDK and are
+  billed to whatever Claude account that CLI is logged into (Anthropic
+  models only, named like `claude-haiku-4-5` / `claude-sonnet-5` or
+  aliases `haiku`/`sonnet`/`opus`). **Billing pin:** on a machine with
+  more than one Claude login (e.g. personal + work), the CLI's ambient
+  login decides who gets billed — to pin runs to a specific account, run
+  `claude setup-token` while signed into that account, put the token in
+  `.env` as `CLAUDE_CODE_OAUTH_TOKEN=...`, and restart the server (it
+  prints which mode it's in at startup). Each call is a single-turn,
+  tool-less CLI run with the wargame's own system prompt — the CLI's
+  agentic scaffolding is stripped out (no tools, no `~/.claude`
+  settings, `ANTHROPIC_API_KEY` blanked in the subprocess so a key in
+  the server's environment can't be silently billed). Noticeably slower
+  than the API since every call spawns a CLI process. Only meaningful
+  while the site runs locally — the CLI is the *server's*, so revisit
+  before deploying anywhere shared.
+
+The Python backend underneath stays fully free-form: `GameConfig` in
+`src/wargame/config.py` takes any agents/objectives/judge-context you
+build in code (see `scripts/run_example.py`). The fixed roster and the
+fixed judge context are a *website* policy, applied in `web/app.py` and
+defined in one place, `src/wargame/presets.py`.
 
 See [docs/research-plan.docx](docs/research-plan.docx) for the original
 research background and rationale (note: the project has since pivoted
@@ -21,9 +45,10 @@ scenario/agents described there).
 
 ## Status
 
-Runs locally as a website: a form for agents/judge/scenario/turns/your
-OpenRouter key, submit, and it runs the whole game and displays the
-transcript. See [the roadmap](#roadmap) below for what's not built yet
+Runs locally as a website: add agents from the fixed roster, pick their
+models and the judge's model, write a starting scenario, set turns,
+paste your OpenRouter key, submit, and it runs the whole game and
+displays the transcript. See [the roadmap](#roadmap) below for what's not built yet
 (deployment, live per-turn progress, etc.).
 
 ## Setup
@@ -55,9 +80,17 @@ venv\Scripts\python.exe -m uvicorn web.app:app --reload
 Then open **http://127.0.0.1:8000** in your browser (don't just
 double-click `web/static/index.html` — it needs to be served by the
 running server, and the page will warn you if it detects it wasn't).
-The page loads pre-filled with a full 8-agent example roster, a judge,
-and a scenario, so you can try it immediately with just your own
-OpenRouter key — every field is editable. It's a "submit and wait"
+The page loads with a ready-to-run lineup of agents and a matching
+example scenario, so you can try it immediately with just your own
+OpenRouter key. Agents are picked from a fixed 8-role roster (click
+"+ Add agent" to browse it and view each role's objective before
+adding) or created from scratch in the same picker (your own name +
+objective); the starting scenario is picked from a preset menu (or
+written from scratch via its "Custom" option). Roster objectives, the
+scenario presets, the model menus, and the judge's grounding context
+are all fixed in `src/wargame/presets.py`; everything else (which
+agents, their models, the judge's model, the scenario, the turn count)
+is yours to change on the page. It's a "submit and wait"
 design for now — the whole game runs before anything appears on the
 page, which can take a while for more agents/turns; live per-turn
 progress is a possible later upgrade,
@@ -94,6 +127,9 @@ config = GameConfig.from_dict({
     "judge": {"model": "anthropic/claude-3.5-sonnet", "context": "..."},
     "scenario": "...",
     "num_turns": 5,
+    # "openrouter" (default, needs the key below) or "claude_code" (the
+    # local Claude Code CLI login — no key; Anthropic model ids/aliases).
+    "backend": "openrouter",
     "openrouter_api_key": "...",
 })
 
@@ -136,5 +172,5 @@ output/         generated transcripts (gitignored)
 
 ## Roadmap
 
-- **Website (local only)** — form-driven agents/judge/scenario/turns, OpenRouter-backed, submit-and-wait results. *(current)*
+- **Website (local only)** — roster-picked agents, per-agent + judge model choice, free-form scenario/turns, OpenRouter-backed, submit-and-wait results. *(current)*
 - **Next** — a real live-key run-through together, then decide what's worth adding: live per-turn progress, deploying it somewhere reachable, welfare/outcome-scoring module, structured JSON output beyond the raw transcript, agent memory across turns.

@@ -32,9 +32,14 @@ def build_agent_system_prompt(name: str, objective: str) -> str:
         # too vague, too long, too wishy-washy, or formatted wrong. It has
         # nothing to do with any specific agent's objective, so changing
         # it changes behavior for every agent at once.
-        f"Stay in character. Respond with concrete, realistic actions this "
-        f"actor would actually take given the situation you're shown — not "
-        f"a list of options, not a balanced overview. Be specific: name the "
-        f"action, who it targets, and what outcome you're hoping for. "
-        f"Keep your response to 2-4 sentences."
+        f"Stay in character. Respond with the concrete, realistic actions "
+        f"this actor would actually take given the situation you're shown "
+        f"— not a list of options, not a balanced overview. For each "
+        f"action, be specific about what you do, who it targets, how you "
+        f"execute it (the channel, the ask, the resources committed), and "
+        f"what outcome you're hoping for. Where it matters, distinguish "
+        f"your public moves from your private maneuvering. Write 1-3 "
+        f"substantial paragraphs (roughly 150-300 words) — enough detail "
+        f"that a judge could realistically adjudicate whether each action "
+        f"works, but no filler or restating of the situation."
     )

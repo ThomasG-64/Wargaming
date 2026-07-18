@@ -11,6 +11,7 @@ from dataclasses import dataclass
 
 from wargame.agents import AgentConfig
 from wargame.judge import JudgeConfig
+from wargame.llm import BACKENDS
 
 
 @dataclass
@@ -19,7 +20,13 @@ class GameConfig:
     judge: JudgeConfig
     scenario: str            # starting situation, plain text
     num_turns: int
-    openrouter_api_key: str
+    # Which model access path runs the game (see wargame.llm):
+    #   "openrouter"  — OpenRouter API, needs openrouter_api_key, any model.
+    #   "claude_code" — the local Claude Code CLI login, no key, Anthropic
+    #                   models only (ids like "claude-haiku-4-5" or aliases
+    #                   like "sonnet"/"haiku").
+    backend: str = "openrouter"
+    openrouter_api_key: str = ""
 
     @classmethod
     def from_dict(cls, data: dict) -> "GameConfig":
@@ -41,7 +48,8 @@ class GameConfig:
             judge=JudgeConfig(**data["judge"]),
             scenario=data["scenario"],
             num_turns=data["num_turns"],
-            openrouter_api_key=data["openrouter_api_key"],
+            backend=data.get("backend", "openrouter"),
+            openrouter_api_key=data.get("openrouter_api_key", ""),
         )
 
     def validate(self) -> None:
@@ -74,5 +82,9 @@ class GameConfig:
             raise ValueError("A starting scenario is required.")
         if self.num_turns < 1:
             raise ValueError("num_turns must be at least 1.")
-        if not self.openrouter_api_key.strip():
+        if self.backend not in BACKENDS:
+            raise ValueError(f"Unknown backend '{self.backend}'. Must be one of {BACKENDS}.")
+        # The claude_code backend authenticates via the local Claude Code
+        # CLI's own login, so a key is only required for openrouter.
+        if self.backend == "openrouter" and not self.openrouter_api_key.strip():
             raise ValueError("An OpenRouter API key is required.")
