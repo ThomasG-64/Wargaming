@@ -17,9 +17,21 @@ alignment-data-pipeline repo's shared/api.py):
   "claude-haiku-4-5") or CLI alias ("sonnet", "haiku", "opus").
 """
 
+import re
+import sys
+import time
+
 import litellm
 
 BACKENDS = ("openrouter", "claude_code")
+
+# Transient CLI failures (mid-stream stalls, init timeouts, dropped
+# connections) get retried with exponential backoff — observed live
+# 2026-07-20: a single stalled stream killed an entire 31-call game.
+# Subscription-window exhaustion must NOT be retried (it takes hours to
+# reset); the CLI reports it as "usage limit" / "session limit".
+_RETRY_BACKOFF_S = [5, 15, 45]  # 4 attempts total
+_LIMIT_PATTERN = re.compile(r"(usage|session)\s+limit", re.IGNORECASE)
 
 # Claude Code treats an empty system prompt as unset and substitutes its
 # own agentic CLI prompt, which would leak tool/codebase behavior into
@@ -68,8 +80,35 @@ def call_agent(
     return response.choices[0].message.content
 
 
+class _NonRetryableError(RuntimeError):
+    """A claude_code failure that retrying can't fix: SDK/CLI missing, or
+    the subscription usage window is exhausted (resets on the order of
+    hours — see _LIMIT_PATTERN)."""
+
+
 def _call_claude_code(model: str, system_prompt: str, user_prompt: str) -> str:
-    """One single-turn, tool-less Claude Code CLI call.
+    """One single-turn Claude Code CLI call, with retries on transient
+    failures (see _RETRY_BACKOFF_S). Non-retryable failures — missing
+    SDK/CLI, usage-limit exhaustion — raise immediately."""
+    for attempt, backoff_s in enumerate([*_RETRY_BACKOFF_S, None], start=1):
+        try:
+            return _claude_code_query_once(model, system_prompt, user_prompt)
+        except _NonRetryableError:
+            raise
+        except RuntimeError as e:
+            if backoff_s is None:
+                raise
+            print(
+                f"  claude_code call attempt {attempt} failed ({str(e)[:200]}) — "
+                f"retrying in {backoff_s}s",
+                file=sys.stderr,
+            )
+            time.sleep(backoff_s)
+    raise AssertionError("unreachable")  # the last loop iteration always returns or raises
+
+
+def _claude_code_query_once(model: str, system_prompt: str, user_prompt: str) -> str:
+    """A single attempt at a single-turn, tool-less Claude Code CLI call.
 
     The CLI is a full agentic coding environment; everything here exists
     to strip that back down to plain text generation so a wargame turn on
@@ -78,8 +117,9 @@ def _call_claude_code(model: str, system_prompt: str, user_prompt: str) -> str:
     - setting_sources=[]: hermetic — don't load ~/.claude settings
       (custom agents, hooks, permission modes) into generated text.
     - env blanks ANTHROPIC_API_KEY/AUTH_TOKEN: Claude Code treats an
-      empty value as unset and falls back to its own login, so a key
-      sitting in this server's environment can't be silently billed.
+      empty value as unset and falls back to its own login (or
+      CLAUDE_CODE_OAUTH_TOKEN), so a key sitting in this server's
+      environment can't be silently billed.
     """
     # Imported lazily so the openrouter backend (and the test suite)
     # never needs the claude-agent-sdk package installed.
@@ -88,7 +128,7 @@ def _call_claude_code(model: str, system_prompt: str, user_prompt: str) -> str:
         from claude_agent_sdk import CLINotFoundError, ClaudeAgentOptions, query
         from claude_agent_sdk.types import AssistantMessage, ResultMessage, TextBlock
     except ImportError as e:
-        raise RuntimeError(
+        raise _NonRetryableError(
             "The Claude Code backend requires the claude-agent-sdk package; "
             "run: pip install -r requirements.txt"
         ) from e
@@ -127,20 +167,26 @@ def _call_claude_code(model: str, system_prompt: str, user_prompt: str) -> str:
     try:
         text_parts, result_msg = anyio.run(_run)
     except CLINotFoundError as e:
-        raise RuntimeError(
+        raise _NonRetryableError(
             "The Claude Code backend requires the Claude Code CLI "
             "(https://claude.com/claude-code); install it, then log in "
             "or set CLAUDE_CODE_OAUTH_TOKEN from `claude setup-token`."
         ) from e
     except Exception as e:  # CLI failures surface as assorted exception types
-        raise RuntimeError(f"Claude Code call failed: {e}") from e
+        raise _classify_failure(str(e)) from e
 
     if result_msg is None:
         raise RuntimeError("Claude Code returned no result message.")
     if result_msg.is_error:
-        raise RuntimeError(
-            f"Claude Code call failed: {result_msg.result or result_msg.subtype or 'unknown error'}"
-        )
+        raise _classify_failure(result_msg.result or result_msg.subtype or "unknown error")
     if result_msg.result is not None:
         return result_msg.result
     return "".join(text_parts)
+
+
+def _classify_failure(message: str) -> RuntimeError:
+    """Usage-limit exhaustion is non-retryable; everything else (stalled
+    streams, init timeouts, dropped connections) is worth retrying."""
+    if _LIMIT_PATTERN.search(message):
+        return _NonRetryableError(f"Claude Code call failed: {message}")
+    return RuntimeError(f"Claude Code call failed: {message}")

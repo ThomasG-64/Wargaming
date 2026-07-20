@@ -134,3 +134,63 @@ def test_call_agent_rejects_unknown_backend():
 
     with pytest.raises(ValueError, match="Unknown backend"):
         call_agent(model="m", system_prompt="s", user_prompt="u", api_key="k", backend="banana")
+
+
+def test_claude_code_retries_transient_failures(monkeypatch):
+    # A stalled stream on attempt 1 must not kill the call (observed
+    # live: one stall killed a whole 31-call game before retries existed).
+    import claude_agent_sdk
+
+    from wargame import llm
+
+    sleeps = []
+    monkeypatch.setattr(llm.time, "sleep", lambda s: sleeps.append(s))
+
+    calls = {"n": 0}
+
+    async def flaky_query(*, prompt, options):
+        calls["n"] += 1
+        if calls["n"] == 1:
+            raise Exception("API Error: Response stalled mid-stream.")
+        yield make_result_message()
+
+    monkeypatch.setattr(claude_agent_sdk, "query", flaky_query)
+
+    result = call_agent(
+        model="claude-haiku-4-5", system_prompt="s", user_prompt="u",
+        api_key="", backend="claude_code",
+    )
+
+    assert result == "cli reply text"
+    assert calls["n"] == 2
+    assert sleeps == [5]  # first backoff step, then success
+
+
+def test_claude_code_does_not_retry_usage_limit(monkeypatch):
+    # Window exhaustion takes hours to reset — retrying would just burn
+    # time; it must surface immediately.
+    import claude_agent_sdk
+    import pytest
+
+    from wargame import llm
+
+    sleeps = []
+    monkeypatch.setattr(llm.time, "sleep", lambda s: sleeps.append(s))
+
+    calls = {"n": 0}
+
+    async def limited_query(*, prompt, options):
+        calls["n"] += 1
+        yield make_result_message(is_error=True, subtype="error",
+                                  result="You've hit your session limit · resets 6:40pm")
+
+    monkeypatch.setattr(claude_agent_sdk, "query", limited_query)
+
+    with pytest.raises(RuntimeError, match="session limit"):
+        call_agent(
+            model="claude-haiku-4-5", system_prompt="s", user_prompt="u",
+            api_key="", backend="claude_code",
+        )
+
+    assert calls["n"] == 1
+    assert sleeps == []
