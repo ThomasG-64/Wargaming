@@ -337,6 +337,48 @@
     font-style: italic;
     margin: 0;
   }
+  .scenario-analysis .verdict {
+    margin: 0.6rem 0 0;
+    padding-top: 0.55rem;
+    border-top: 1px dashed var(--border);
+    font-size: 0.95rem;
+  }
+  .scenario-analysis .verdict strong { color: var(--accent-dark); }
+  .finding {
+    background: #ecf5f4;
+    border-left: 4px solid var(--accent);
+    border-radius: 6px;
+    padding: 0.9rem 1.1rem;
+    margin: 1rem 0;
+  }
+  .finding p { margin: 0.4rem 0; }
+  .article blockquote {
+    margin: 0.6rem 0 0.6rem 0.2rem;
+    padding-left: 0.9rem;
+    border-left: 3px solid var(--border);
+    color: var(--muted);
+    font-style: italic;
+  }
+  .freq {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 700;
+    font-style: normal;
+    color: white;
+    background: var(--accent);
+    border-radius: 999px;
+    padding: 0.05rem 0.5rem;
+    margin-left: 0.35rem;
+    vertical-align: middle;
+  }
+  .caveat {
+    background: #fdf6e3;
+    border: 1px solid #e6d9a8;
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    margin: 1.25rem 0;
+    font-size: 0.95rem;
+  }
   .article-footnote {
     color: var(--muted);
     font-size: 0.88rem;
@@ -490,23 +532,27 @@
   </div>
 </div>
 
-<!-- EDIT HERE: the Implications article. Everything below is placeholder
-     structure — once enough runs have been done and analyzed, replace
-     the "Analysis pending" notices (and this intro, if you like) with
-     the actual findings. The per-scenario sections mirror the scenario
-     presets in wargame.presets so there's an obvious slot for each. -->
+<!-- EDIT HERE: the Implications article. This is a real cross-run
+     analysis of the 30 runs in output/runs.jsonl (6 scenarios x 5 runs
+     each), synthesized from the judge models' after-action reports.
+     Every frequency (e.g. "5/5") and quote is drawn from those runs and
+     is traceable in the Results tab. Re-run the analysis and revise here
+     as more runs accumulate or as scenarios/models change. -->
 <div id="tab-implications" class="tab-content">
   <article class="article panel">
     <h2>What Wargaming Suggests About the Future of Animal Welfare</h2>
-    <p class="article-byline">A living analysis built from simulation runs on this site &middot; last updated July 2026</p>
+    <p class="article-byline">A cross-run analysis of 30 simulations &middot; 6 scenarios &times; 5 runs each &middot; July 2026</p>
 
-    <div class="notice">
-      <strong>Analysis pending.</strong> This page is the placeholder for a
-      cross-run analysis that hasn't been written yet. Runs are being
-      collected now; once there are enough of them, the sections below
-      will be filled in with what actually happened across them —
-      patterns, turning points, and what they suggest about how animal
-      welfare fares under different futures.
+    <div class="finding">
+      <p><strong>The headline finding, stated plainly:</strong> across all
+      30 runs and all six scenarios, essentially nothing changed inside
+      the barn. Not one run enacted a binding stocking-density limit, a
+      breeding standard, or a slaughter/depopulation rule. Whatever the
+      shock — a broken cage-free pledge, a lab-grown-meat breakthrough, a
+      near-pandemic, a wave of invertebrate-sentience science, or the
+      arrival of cheap artificial general intelligence — the fight
+      reliably moved <em>off</em> the animals and onto economics, legal
+      exposure, and narrative control.</p>
     </div>
 
     <h3>What this project is</h3>
@@ -523,89 +569,208 @@
       things ended up.
     </p>
     <p>
-      No single run predicts anything. The point is repetition: run the
-      same scenario many times, vary the models and lineups, and look for
-      the patterns that keep showing up — which levers reliably move
-      welfare outcomes, which commitments reliably collapse, which
-      coalitions form again and again. That aggregate picture is what
-      this page will present.
+      No single run predicts anything. The value is in repetition: run
+      the same scenario five times and look for what keeps showing up.
+      The analysis below is built from 30 runs — every scenario preset
+      played five times, with the roster's default lineups, agents on
+      Claude Haiku 4.5 and the judge on Claude Sonnet 5. Every "5/5" or
+      "4/5" below counts how many of a scenario's five runs shared an
+      outcome; every quotation is the judge's own language from a run you
+      can open in the Results tab.
     </p>
 
-    <h3>The scenarios under study</h3>
+    <div class="caveat">
+      <strong>Read this as hypotheses, not forecasts.</strong> These are
+      language models reasoning about plausible behavior, not evidence of
+      what will happen. One caveat matters most: all 30 runs share a
+      single judge model working from one fixed background brief, so the
+      convergence below partly reflects <em>that judge's priors</em> —
+      most visibly its strong tendency to rule that law and money move
+      outcomes while moral appeals don't. The patterns are striking and
+      internally consistent, but the right next step is re-running with
+      different judge models to see which findings survive. Treat this
+      page as a well-structured set of questions worth asking, not
+      answers.
+    </div>
+
+    <h3>The patterns that held across scenarios</h3>
     <p>
-      Six starting situations are being explored, each built from real
-      dynamics in animal agriculture. Findings for each will appear here.
+      Six unrelated starting situations, and yet the same handful of
+      dynamics recurred in run after run:
     </p>
+    <ul>
+      <li><strong>Existing law beat everything else.</strong> The lever
+      that actually moved welfare-adjacent outcomes was almost always a
+      regulator enforcing rules that <em>already exist</em> — truth-in-
+      labeling, substantiation, humane-handling, anti-retaliation,
+      antitrust — never new welfare rulemaking, which never passed in any
+      run. As one AGI-scenario report put it, gains "arrived as
+      second-order effects of enforcement and reputational risk-
+      management, not as a direct policy or market outcome."</li>
+      <li><strong>Money talked; morals didn't.</strong> Institutional
+      investors reframing animal welfare as fiduciary and cost-of-capital
+      risk consistently out-pulled advocacy campaigns making the moral
+      case. Moral suasion, public pledges, open letters, and scorecards-
+      without-teeth reliably produced noise and little else.</li>
+      <li><strong>Only enforceable, audited commitments stuck.</strong>
+      The rare durable win came when advocates converted reputational
+      leverage into a <em>binding contract with third-party audit
+      rights</em> — not a pledge. Confidential, outcome-only, industry-
+      run audits were repeatedly rejected as unverifiable.</li>
+      <li><strong>Industry kept convicting itself.</strong> In nearly
+      every run the producer's own containment move — a hush payment, a
+      coordinated messaging push, a stealth acquisition, buying a
+      witness's silence — became the single most damaging piece of
+      evidence against it, triggering antitrust, obstruction, or
+      false-advertising exposure. The "Industry Reputation Defense
+      Coalition" was absent or ineffective in almost all 30 runs.</li>
+      <li><strong>Cheap-and-visible moved; costly-and-structural
+      stalled.</strong> Wherever anything advanced, it was the low-cost,
+      legible fix (electrical stunning, worker audits, controlled-
+      atmosphere culling, a cage-free percentage). The expensive
+      structural change at the heart of each scenario — stocking density
+      above all — stalled in pilots or died every time.</li>
+      <li><strong>Outside shocks became universal cover.</strong> Avian
+      flu, in the scenarios where it appeared, "did what it always does:
+      it handed every actor cover" — a fact each side could honestly cite
+      and dishonestly exploit at once, slowing rather than forcing
+      change.</li>
+    </ul>
+
+    <h3>The six scenarios</h3>
 
     <section class="scenario-analysis">
-      <h4>Cage-Free Reckoning</h4>
+      <h4>Cage-Free Reckoning <span class="freq">5 runs</span></h4>
       <p class="scenario-blurb">A retailer three months from a public 100% cage-free
       deadline it won't hit, an advocacy scorecard about to call it a
-      laggard, and an avian-flu supply shock hitting everyone at once.
-      What happens to corporate welfare pledges under pressure?</p>
-      <p class="pending">Analysis pending — runs in progress.</p>
+      laggard, and an avian-flu supply shock hitting everyone at once.</p>
+      <p>The retailer never reached 100% in any run; the pledge was
+      always renegotiated into softer 2027–28 targets. The one clean
+      welfare win (1/5) came when advocates refused a pledge and held out
+      for a signed contract with quarterly third-party audits; a second
+      run won partial ground through the buyer diversifying supply away
+      from a single integrator. Everywhere else the deadline "proved
+      almost impervious to direct pressure" and institutional investors
+      quietly eclipsed the advocacy campaign as the effective lever.</p>
+      <blockquote>"nothing in this game actually moved a hen out of a cage."</blockquote>
+      <p class="verdict"><strong>Verdict:</strong> welfare advanced only where reputational leverage was converted into a binding, externally audited commitment — otherwise the pledge deadline held and the fight dissolved into economics.</p>
     </section>
 
     <section class="scenario-analysis">
-      <h4>The Regulatory Pathway Fight</h4>
-      <p class="scenario-blurb">Cultivated meat clears federal safety review just as a
-      state bans it from using the word "chicken." Can a nascent
+      <h4>The Regulatory Pathway Fight <span class="freq">5 runs</span></h4>
+      <p class="scenario-blurb">Cultivated meat clears federal safety review just as
+      several states ban it from using the word "chicken." Can a nascent
       alternative to animal agriculture survive its labeling war?</p>
-      <p class="pending">Analysis pending — runs in progress.</p>
+      <p>In every run the company survived but never scaled — a small
+      foodservice beachhead, no retail shelf, no price parity. Litigating
+      the state bans went nowhere (abandoned or dismissed on ripeness in
+      most runs); the decisive actor was a studiously neutral regulator
+      enforcing existing law. The ESG investors pivoted <em>away</em>
+      from cultivated meat toward pressuring conventional producers on
+      disclosure. Crucially, none of it touched a single farmed bird.</p>
+      <blockquote>"welfare-oriented alternatives will keep winning narrow regulatory battles while losing the market-access war."</blockquote>
+      <p class="verdict"><strong>Verdict:</strong> a safety-review breakthrough for cultivated meat changed nothing for farmed animals; the contest stayed stuck at labeling, capital, and shelf access.</p>
     </section>
 
     <section class="scenario-analysis">
-      <h4>Tournament System Under Fire</h4>
+      <h4>Tournament System Under Fire <span class="freq">5 runs</span></h4>
       <p class="scenario-blurb">Contract growers organize against the ranking-based pay
       system that keeps them indebted and silent — with welfare advocates
       offering to amplify their case. Do farmer justice and animal
       welfare interests actually align?</p>
-      <p class="pending">Analysis pending — runs in progress.</p>
+      <p>The growers won the labor and retaliation fight in all five runs,
+      powered by a fast-moving regulator and by the integrator's own
+      retaliation (severance-for-silence clauses, firings, NDA payoffs)
+      turning into the evidence that sank it. But the animal-facing asks —
+      stocking density, housing — gained almost no ground in any run. The
+      two interests <em>diverged</em>: coupling welfare demands onto the
+      labor case tended to dilute or fracture the case that actually had
+      teeth. The one alignment was indirect — less economically desperate
+      growers cut fewer corners on ventilation and mortality.</p>
+      <blockquote>"What actually moved in this game was labor and contract fairness, not animal welfare."</blockquote>
+      <p class="verdict"><strong>Verdict:</strong> farmer-justice wins and animal-welfare wins are not the same fight; welfare here moved only as an indirect byproduct, and pressing it directly weakened the winning case.</p>
     </section>
 
     <section class="scenario-analysis">
-      <h4>The Pandemic on the Farm</h4>
+      <h4>The Pandemic on the Farm <span class="freq">5 runs</span></h4>
       <p class="scenario-blurb">H5N1 jumps closer to humans from inside a large egg
       complex — mass culls, a vaccine trade dilemma, and advocates
-      arguing that confinement density itself is the accelerant. Does a
-      zoonotic scare reform the system or entrench it?</p>
-      <p class="pending">Analysis pending — runs in progress.</p>
+      arguing that confinement density itself is the accelerant.</p>
+      <p>A live zoonotic scare drove <em>zero</em> binding reform of
+      confinement in any run — it entrenched the system rather than
+      reforming it. The central vaccine-vs-export-ban decision was never
+      resolved in a single run; the fight displaced onto audits,
+      labeling, and data custody. The most effective lever, again, was
+      investors pricing density as pandemic-volatility risk, plus a
+      regulator using labeling and records-demand authority rather than
+      writing a density rule. Twice, industry attempts to self-coordinate
+      backfired into antitrust exposure.</p>
+      <blockquote>"It only changed who paid, and how much, in credit-market terms."</blockquote>
+      <p class="verdict"><strong>Verdict:</strong> even a pandemic-adjacent emergency rearranged cost and liability without changing a single bird's conditions — crisis urgency did not translate into structural reform.</p>
     </section>
 
     <section class="scenario-analysis">
-      <h4>The Expanding Circle</h4>
-      <p class="scenario-blurb">Invertebrate sentience science goes mainstream: shrimp
-      stunning commitments, octopus-farming bans, and the first combined
-      welfare standard for finfish and shrimp land on a seafood retailer
-      at once. How far does the moral circle actually stretch when
-      margins are thin?</p>
-      <p class="pending">Analysis pending — runs in progress.</p>
+      <h4>The Expanding Circle <span class="freq">5 runs</span></h4>
+      <p class="scenario-blurb">Invertebrate-sentience science goes mainstream: shrimp
+      stunning, octopus-farming bans, and the first combined welfare
+      standard for finfish and shrimp land on a seafood retailer at once.</p>
+      <p>No binding welfare standard was delivered in any run; no animal
+      ended up materially better off. Where anything moved, only the
+      cheap, visible fix (stunning, water quality) advanced while stocking
+      density stalled. The regulator was again the pivotal actor — but
+      cut both ways: it raised the evidentiary bar in two runs and gave
+      industry cover in three. The reform side's own tangled funding
+      (advocates, alt-protein money, and scientists sharing donors)
+      repeatedly became its central liability.</p>
+      <blockquote>"change happens fast where it's cheap and visible but stalls where it touches real structure and cost."</blockquote>
+      <p class="verdict"><strong>Verdict:</strong> the moral circle's expansion stopped at procedure and labeling; margin economics beat sentience science every time it came down to a costly structural change.</p>
     </section>
 
     <section class="scenario-analysis">
-      <h4>AGI Arrives, Superintelligence Doesn't</h4>
+      <h4>AGI Arrives, Superintelligence Doesn't <span class="freq">5 runs</span></h4>
       <p class="scenario-blurb">Expert-level AI becomes a commodity every actor can
       afford — industry automates whole supply chains, advocates run
       investigations no human team could match, regulators face
-      inspecting facilities with no humans in them. Who wins when
-      everyone gets the same cheap cognition?</p>
-      <p class="pending">Analysis pending — runs in progress.</p>
+      inspecting facilities with no humans in them.</p>
+      <p>The bid to certify a fully autonomous, human-free facility failed
+      in all five runs — a human-in-the-loop floor became the de facto
+      standard, though won "as a documentation fix, not a welfare fix."
+      Cheap ubiquitous AI mainly accelerated the <em>speed and scale</em>
+      of the legal and evidentiary fight; it changed the vocabulary, not
+      the conditions. Advocates' AI-built investigations mattered only
+      where a regulator adopted them as an enforcement basis. Bird-level
+      conditions were untouched in every run.</p>
+      <blockquote>"industry will absorb this as 'don't get caught lying,' not 'improve conditions'."</blockquote>
+      <p class="verdict"><strong>Verdict:</strong> AGI gave every side sharper tools but moved nothing inside the barn — the binding constraint was never cognition, it was who has legal authority to force change.</p>
     </section>
 
-    <h3>What to look for when the analysis lands</h3>
-    <ul>
-      <li>Which mechanisms actually moved welfare outcomes across runs — public scorecards, supplier contracts, shareholder pressure, regulation, market alternatives — and which just made noise.</li>
-      <li>The failure modes: where welfare commitments collapsed, and what conditions made collapse cheap for the actor abandoning them.</li>
-      <li>Recurring alliances and betrayals — especially the unstable ones, like growers and welfare advocates, or investors and campaigners.</li>
-      <li>How outside shocks (disease outbreaks, investigations, technology shifts) redistributed leverage between actors.</li>
-      <li>Whether different models playing the same role behave differently — and what that says about using LLMs for this kind of foresight at all.</li>
-    </ul>
+    <h3>So what does this suggest?</h3>
+    <p>
+      If these runs are even directionally right, the implication for
+      anyone working on farmed-animal welfare is uncomfortable but
+      actionable: the reliable levers were <strong>enforcement of
+      existing law, binding audited contracts, and financial-risk framing
+      aimed at investors</strong> — not moral campaigns, voluntary
+      pledges, litigation against bans, or waiting for a shock to force
+      the issue. The recurring failure was the assumption that a dramatic
+      event (a pandemic, a breakthrough, a technology) would open a
+      window for structural change; in 30 runs it never did, because
+      every actor could metabolize the drama into a fight about cost and
+      liability instead. And the deepest structural harm — how densely
+      animals are packed — never once moved, because it is exactly the
+      change that is expensive, invisible to consumers, and unprotected
+      by any existing statute the simulated regulators felt able to wield.
+    </p>
 
     <p class="article-footnote">
-      Methodology note: every claim on this page will be traceable to
-      specific runs viewable in the Results tab. Simulations are
-      exploratory foresight, not prediction — they map the space of
-      plausible dynamics, not the future.
+      Methodology: 30 runs (six scenario presets, five runs each), agents
+      played by Claude Haiku 4.5, judge and after-action reports by Claude
+      Sonnet 5, run through this site's Claude Code backend in July 2026.
+      Every run is viewable in the Results tab; frequencies and quotes
+      above are drawn from those transcripts. These simulations are
+      exploratory foresight, not prediction — and, as noted above, a
+      single judge model shapes every outcome, so findings should be
+      re-tested across models before being trusted.
     </p>
   </article>
 </div>
